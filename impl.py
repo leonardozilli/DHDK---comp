@@ -129,7 +129,7 @@ class CollectionProcessor(Processor):
             g.add((URIRef(manifest['id']), identifier, Literal(manifest['id'])))
             g.add((URIRef(manifest['id']), RDF.type, manifest_uri))
             g.add((URIRef(manifest['id']), label, Literal(manifest['label']['none'][0])))
-            g.add((URIRef(manifest['id']), hasItems, Literal(manifest['items'])))
+            #g.add((URIRef(manifest['id']), hasItems, Literal(manifest['items'])))
             for idx, canvas in enumerate(manifest['items']):
                 g.add((URIRef(manifest['id']), hasItems, Literal(canvas['id'])))
                 g.add((URIRef(canvas['id']), identifier, Literal(canvas['id'])))
@@ -159,6 +159,8 @@ class QueryProcessor(Processor):
                 return df
         else:
             endpoint = self.dbPathOrUrl
+
+            #what should this dataframe describe? surely not only the id?
             query = """
                 PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
                 PREFIX lz: <http://leonardozilli.it/#>
@@ -168,8 +170,11 @@ class QueryProcessor(Processor):
                 WHERE {?s schema:identifier {entityId} .
                     ?s ?p ?o}
                     """
-            df = sparql_dataframe.get(endpoint, query, post=True)
-            return df
+
+            endpoint.setQuery(query)
+            endpoint.setReturnFormat(JSON)
+            result = endpoint.queryAndConvert()
+            return json_normalize(result['results']['bindings'])[['id.value']].rename(columns={'id.value' : 'id'})
 
 
 class RelationalQueryProcessor(QueryProcessor):
@@ -219,6 +224,7 @@ class RelationalQueryProcessor(QueryProcessor):
         return df_sql
 
 
+#maybe handle input errors?
 class TriplestoreQueryProcessor(QueryProcessor):
     def __init__(self):
         super().__init__()
@@ -237,7 +243,7 @@ class TriplestoreQueryProcessor(QueryProcessor):
         endpoint.setQuery(query)
         endpoint.setReturnFormat(JSON)
         result = endpoint.queryAndConvert()
-        return result
+        return json_normalize(result['results']['bindings'])[['s.value']].rename(columns={'s.value' : 'id'})
 
     def getAllManifests(self):
 
@@ -254,7 +260,7 @@ class TriplestoreQueryProcessor(QueryProcessor):
         endpoint.setQuery(query)
         endpoint.setReturnFormat(JSON)
         result = endpoint.queryAndConvert()
-        return json_normalize(result['results']['bindings'])[['s.value']]
+        return json_normalize(result['results']['bindings'])[['s.value']].rename(columns={'s.value' : 'id'})
 
     def getAllCanvases(self):
 
@@ -270,7 +276,7 @@ class TriplestoreQueryProcessor(QueryProcessor):
         endpoint.setQuery(query)
         endpoint.setReturnFormat(JSON)
         result = endpoint.queryAndConvert()
-        return result
+        return json_normalize(result['results']['bindings'])[['s.value']].rename(columns={'s.value' : 'id'})
 
 
     def getEntitiesWithLabel(self, label: str):
@@ -287,7 +293,7 @@ class TriplestoreQueryProcessor(QueryProcessor):
         endpoint.setQuery(query)
         endpoint.setReturnFormat(JSON)
         result = endpoint.queryAndConvert()
-        return result
+        return json_normalize(result['results']['bindings'])[['s.value']].rename(columns={'s.value' : 'id'})
 
 
     def getCanvasesInCollection(self, collectionId: str):
@@ -309,9 +315,9 @@ class TriplestoreQueryProcessor(QueryProcessor):
         endpoint.setQuery(query)
         endpoint.setReturnFormat(JSON)
         result = endpoint.queryAndConvert()
-        return result
+        return json_normalize(result['results']['bindings'])[['c.value']].rename(columns={'c.value' : 'id'})
 
-    def getCanvasesinManifest(self, manifestId: str):
+    def getCanvasesInManifest(self, manifestId: str):
 
         endpoint = SPARQLWrapper(self.getDbPathOrUrl()) 
 
@@ -320,15 +326,15 @@ class TriplestoreQueryProcessor(QueryProcessor):
             PREFIX lz: <http://leonardozilli.it/#>
             PREFIX schema: <https://schema.org/>
 
-            SELECT ?o
+            SELECT ?id
             WHERE {{?s schema:identifier "{manifestId}" .
-                   ?s lz:hasItems ?o}}
+                   ?s lz:hasItems ?id}}
         '''
 
         endpoint.setQuery(query)
         endpoint.setReturnFormat(JSON)
         result = endpoint.queryAndConvert()
-        return result
+        return json_normalize(result['results']['bindings'])[['id.value']].rename(columns={'id.value' : 'id'})
 
     def getManifestsInCollection(self, collectionId: str):
 
@@ -347,4 +353,4 @@ class TriplestoreQueryProcessor(QueryProcessor):
         endpoint.setQuery(query)
         endpoint.setReturnFormat(JSON)
         result = endpoint.queryAndConvert()
-        return result
+        return json_normalize(result['results']['bindings'])[['o.value']].rename(columns={'o.value' : 'id'})

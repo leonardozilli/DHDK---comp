@@ -20,7 +20,7 @@ col_dp.uploadData("data/collection-2.json")
 grp_qp = TriplestoreQueryProcessor()
 grp_qp.setDbPathOrUrl(grp_endpoint)
 
-result = grp_qp.getAllManifests()
+result= grp_qp.getManifestsInCollection("https://dl.ficlit.unibo.it/iiif/19428-19425/collection")
 
 print(result)
 print(type(result))
