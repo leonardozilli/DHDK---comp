@@ -2,13 +2,13 @@ from DM_classes import *
 import re
 import json
 from pprint import pprint
+from string import Template
 from typing import List
 from sqlite3 import connect
-from pandas import read_csv, Series, read_sql, read_json
+from pandas import read_csv, Series, read_sql, read_json, json_normalize
 from rdflib import Graph, URIRef, Literal, Namespace, RDF
 from rdflib.plugins.stores.sparqlstore import SPARQLUpdateStore
 from SPARQLWrapper import SPARQLWrapper, JSON
-import sparql_dataframe
 
 class Processor():
     def __init__(self):
@@ -25,6 +25,7 @@ class AnnotationProcessor(Processor):
     def __init__(self):
         super().__init__()
 
+    #why does this returns bool??
     def uploadData(self, path: str) -> bool:
         data = read_csv(path, keep_default_na=False)
 
@@ -58,18 +59,37 @@ class MetadataProcessor(Processor):
     def __init__(self):
         super().__init__()
 
+    #why does this returns bool??
+    #where to get label??
     def uploadData(self, path: str) -> bool:
         df = read_csv(path,
                       keep_default_na=False)
 
+
+        #do these need an internalId??
+        #query also possible, same performances, maybe more readable?
+        entitycreator = []
+        collectionItems = []
+        #Iteratively appending rows to a DataFrame can be more computationally intensive than a single concatenate. A better solution is to append those rows to a list and then concatenate the list with the original DataFrame all at once
+
+        for idx, row in df.iterrows():
+            if row['creator'] != '':
+                if ';' in row['creator']:
+                    for creator in row['creator'].split(';'):
+                        entitycreator.append((row['id'], creator))
+                else:
+                    entitycreator.append((row['id'], row['creator']))
+
         collections_df = df[df['id'].str.endswith('collection')]
         manifests_df = df[df['id'].str.endswith('manifest')]
         canvases_df = df[df['id'].str.contains('canvas')]
+        entitycreator_df = pd.DataFrame(entitycreator, columns=['id', 'creator'])
 
         with connect(self.dbPathOrUrl) as conn:
             collections_df.to_sql('Collection', conn, if_exists="replace", index=False)
             manifests_df.to_sql('Manifest', conn, if_exists="replace", index=False)
             canvases_df.to_sql('Canvas', conn, if_exists="replace", index=False)
+            entitycreator_df.to_sql("EntityCreator", conn, if_exists="replace", index=False)
 
 
 class CollectionProcessor(Processor):
@@ -95,26 +115,26 @@ class CollectionProcessor(Processor):
 
         #relations
         hasItems = URIRef(mywb.hasItems)
+
         g = Graph()
 
-        collection_subj = URIRef(base_url + re.findall(r'[ \w-]+?(?=\.)', path)[0])
-        g.add((URIRef(collection_subj), identifier, Literal(data['id'])))
-        g.add((URIRef(collection_subj), RDF.type, collection_uri))
-        g.add((URIRef(collection_subj), label, Literal(data['label']['none'][0])))
-        g.add((URIRef(collection_subj),  hasItems, Literal(data['items']))) #can a list of items be a Literal?
-        canvas_count = 0 #counting canvases from 0 for each manifest?
+        #id has id -> id???
+        #what should the id be?? a literal??
+        g.add((URIRef(data['id']), identifier, Literal(data['id'])))
+        g.add((URIRef(data['id']), RDF.type, collection_uri))
+        g.add((URIRef(data['id']), label, Literal(data['label']['none'][0])))
+        #g.add((URIRef(data['id']),  hasItems, Literal(data['items']))) #can a list of items be a Literal? "object must be an rdflib term..."
         for idx, manifest in enumerate(data['items']):
-            manifest_subj = URIRef(base_url + 'manifest-' + str(idx)) #this doesnt work with manifest from different .json files
-            g.add((URIRef(manifest_subj), identifier, Literal(manifest['id'])))
-            g.add((URIRef(manifest_subj), RDF.type, manifest_uri))
-            g.add((URIRef(manifest_subj), label, Literal(manifest['label']['none'][0])))
-            g.add((URIRef(manifest_subj), hasItems, Literal(manifest['items'])))
+            g.add((URIRef(data['id']), hasItems, Literal(manifest['id'])))
+            g.add((URIRef(manifest['id']), identifier, Literal(manifest['id'])))
+            g.add((URIRef(manifest['id']), RDF.type, manifest_uri))
+            g.add((URIRef(manifest['id']), label, Literal(manifest['label']['none'][0])))
+            g.add((URIRef(manifest['id']), hasItems, Literal(manifest['items'])))
             for idx, canvas in enumerate(manifest['items']):
-                canvas_count += 1
-                canvas_subj = URIRef(base_url + 'canvas-' + str(canvas_count))
-                g.add((URIRef(canvas_subj), identifier, Literal(canvas['id'])))
-                g.add((URIRef(canvas_subj), RDF.type, canvas_uri))
-                g.add((URIRef(canvas_subj), label, Literal(canvas['label']['none'][0])))
+                g.add((URIRef(manifest['id']), hasItems, Literal(canvas['id'])))
+                g.add((URIRef(canvas['id']), identifier, Literal(canvas['id'])))
+                g.add((URIRef(canvas['id']), RDF.type, canvas_uri))
+                g.add((URIRef(canvas['id']), label, Literal(canvas['label']['none'][0]))) #only the string of the label??
 
         store = SPARQLUpdateStore()
 
@@ -132,7 +152,7 @@ class QueryProcessor(Processor):
         super().__init__()
 
     def getEntityById(self, entityId: str):
-        if '.db' in self.dbPathOrUrl:
+        if '.db' in self.dbPathOrUrl: #this could be problematic
             with connect(self.dbPathOrUrl) as con:
                 query = f"SELECT * FROM Annotation JOIN Image ON Annotation.body == Image.id where Annotation.id == '{entityId}'"
                 df = read_sql(query, con)
@@ -192,13 +212,6 @@ class RelationalQueryProcessor(QueryProcessor):
             df_sql = read_sql(query, con)
         return df_sql
         
-    #where to get label???
-    def getEntitiesWithLabel(self, label: str):
-        with connect(self.dbPathOrUrl) as con:
-            query = f"SELECT * FROM Annotation WHERE label == '{label}'"
-            df_sql = read_sql(query, con)
-        return df_sql
-    
     def getEntitiesWithTitle(self, title: str):
         with connect(self.dbPathOrUrl) as con:
             query = f"SELECT * FROM Annotation WHERE title == '{title}'"
@@ -219,9 +232,8 @@ class TriplestoreQueryProcessor(QueryProcessor):
             PREFIX lz: <http://leonardozilli.it/#>
 
             SELECT *
-            WHERE {?s rdf:type lz:Collection .
-                  ?s ?p ?o .}
-        '''
+            WHERE {?s a lz:Collection }
+            '''
         endpoint.setQuery(query)
         endpoint.setReturnFormat(JSON)
         result = endpoint.queryAndConvert()
@@ -236,13 +248,13 @@ class TriplestoreQueryProcessor(QueryProcessor):
             PREFIX lz: <http://leonardozilli.it/#>
 
             SELECT ?s
-            WHERE {?s rdf:type lz:Manifest .
-                  ?s ?p ?o .}
+            WHERE {?s a lz:Manifest }
         '''
+
         endpoint.setQuery(query)
         endpoint.setReturnFormat(JSON)
         result = endpoint.queryAndConvert()
-        return pprint(result)
+        return json_normalize(result['results']['bindings'])[['s.value']]
 
     def getAllCanvases(self):
 
@@ -253,8 +265,7 @@ class TriplestoreQueryProcessor(QueryProcessor):
             PREFIX lz: <http://leonardozilli.it/#>
 
             SELECT *
-            WHERE {?s rdf:type lz:Canvas .
-                  ?s ?p ?o .}
+            WHERE {?s a lz:Canvas}
         '''
         endpoint.setQuery(query)
         endpoint.setReturnFormat(JSON)
@@ -262,3 +273,78 @@ class TriplestoreQueryProcessor(QueryProcessor):
         return result
 
 
+    def getEntitiesWithLabel(self, label: str):
+
+        endpoint = SPARQLWrapper(self.getDbPathOrUrl()) 
+
+        query = f'''
+            PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+            PREFIX lz: <http://leonardozilli.it/#>
+
+            SELECT ?s
+            WHERE {{?s lz:Label "{label}"}}
+        '''
+        endpoint.setQuery(query)
+        endpoint.setReturnFormat(JSON)
+        result = endpoint.queryAndConvert()
+        return result
+
+
+    def getCanvasesInCollection(self, collectionId: str):
+
+        endpoint = SPARQLWrapper(self.getDbPathOrUrl()) 
+
+        query = f'''
+            PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+            PREFIX lz: <http://leonardozilli.it/#>
+            PREFIX schema: <https://schema.org/>
+
+            SELECT ?c
+            WHERE {{?s schema:identifier "{collectionId}" ;
+                      lz:hasItems ?o .
+                  ?m schema:identifier ?o ;
+                     lz:hasItems ?c }}
+        '''
+
+        endpoint.setQuery(query)
+        endpoint.setReturnFormat(JSON)
+        result = endpoint.queryAndConvert()
+        return result
+
+    def getCanvasesinManifest(self, manifestId: str):
+
+        endpoint = SPARQLWrapper(self.getDbPathOrUrl()) 
+
+        query = f'''
+            PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+            PREFIX lz: <http://leonardozilli.it/#>
+            PREFIX schema: <https://schema.org/>
+
+            SELECT ?o
+            WHERE {{?s schema:identifier "{manifestId}" .
+                   ?s lz:hasItems ?o}}
+        '''
+
+        endpoint.setQuery(query)
+        endpoint.setReturnFormat(JSON)
+        result = endpoint.queryAndConvert()
+        return result
+
+    def getManifestsInCollection(self, collectionId: str):
+
+        endpoint = SPARQLWrapper(self.getDbPathOrUrl()) 
+
+        query = f'''
+            PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+            PREFIX lz: <http://leonardozilli.it/#>
+            PREFIX schema: <https://schema.org/>
+
+            SELECT ?o
+            WHERE {{?s schema:identifier "{collectionId}" .
+                   ?s lz:hasItems ?o }}
+        '''
+
+        endpoint.setQuery(query)
+        endpoint.setReturnFormat(JSON)
+        result = endpoint.queryAndConvert()
+        return result
