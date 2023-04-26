@@ -211,15 +211,15 @@ class QueryProcessor(Processor):
         if '.db' in self.dbPathOrUrl: #this could be problematic [e.g. hidden files]
             with connect(self.dbPathOrUrl) as con:
                 query = f'''
-                    SELECT id FROM 'Collection' WHERE id == '{entityId}'
+                    SELECT * FROM 'Collection' WHERE id == '{entityId}'
                     UNION ALL
-                    SELECT id FROM 'Manifest' WHERE id == '{entityId}'
+                    SELECT * FROM 'Manifest' WHERE id == '{entityId}'
                     UNION ALL
-                    SELECT id FROM 'Canvas' WHERE id == '{entityId}'
+                    SELECT * FROM 'Canvas' WHERE id == '{entityId}'
                     UNION ALL
-                    SELECT id FROM 'Annotation' WHERE id == '{entityId}'
+                    SELECT * FROM 'Annotation' WHERE id == '{entityId}'
                     UNION ALL
-                    SELECT id FROM 'Image' WHERE id == '{entityId}'
+                    SELECT * FROM 'Image' WHERE id == '{entityId}'
                     '''
                 df = read_sql(query, con)
                 return df
@@ -496,22 +496,76 @@ class GenericQueryProcessor():
         pass
 
     def getAnnotationsToCanvas(self, canvasId: str) -> List[Annotation]:
-        pass
+        for processor in self.queryProcessors:
+            #????
+            if isinstance(processor, RelationalQueryProcessor):
+                result = [Annotation(identifier, body, target, motivation) for
+                          identifier, body, target, motivation in
+                          zip(processor.getAnnotationsWithTarget(canvasId)['id'],
+                              processor.getAnnotationsWithTarget(canvasId)['body'],
+                              processor.getAnnotationsWithTarget(canvasId)['target'],
+                              processor.getAnnotationsWithTarget(canvasId)['motivation'])]
+                return result
 
     def getAnnotationsToCollection(self, collectionId: str) -> List[Annotation]:
-        pass
+        for processor in self.queryProcessors:
+            #????
+            if isinstance(processor, RelationalQueryProcessor):
+                result = [Annotation(identifier, body, target, motivation) for
+                          identifier, body, target, motivation in
+                          zip(processor.getAnnotationsWithTarget(collectionId)['id'],
+                              processor.getAnnotationsWithTarget(collectionId)['body'],
+                              processor.getAnnotationsWithTarget(collectionId)['target'],
+                              processor.getAnnotationsWithTarget(collectionId)['motivation'])]
+                return result
 
     def getAnnotationsToManifest(self, manifestId: str) -> List[Annotation]:
-        pass
+        for processor in self.queryProcessors:
+            #????
+            if isinstance(processor, RelationalQueryProcessor):
+                result = [Annotation(identifier, body, target, motivation) for
+                          identifier, body, target, motivation in
+                          zip(processor.getAnnotationsWithTarget(manifestId)['id'],
+                              processor.getAnnotationsWithTarget(manifestId)['body'],
+                              processor.getAnnotationsWithTarget(manifestId)['target'],
+                              processor.getAnnotationsWithTarget(manifestId)['motivation'])]
+                return result
 
     def getAnnotationsWithBody(self, bodyId: str) -> List[Annotation]:
-        pass
+        for processor in self.queryProcessors:
+            #????
+            if isinstance(processor, RelationalQueryProcessor):
+                result = [Annotation(identifier, body, target, motivation) for
+                          identifier, body, target, motivation in
+                          zip(processor.getAnnotationsWithBody(bodyId)['id'],
+                              processor.getAnnotationsWithBody(bodyId)['body'],
+                              processor.getAnnotationsWithBody(bodyId)['target'],
+                              processor.getAnnotationsWithBody(bodyId)['motivation'])]
+                return result
 
     def getAnnotationsWithBodyAndTarget(self, bodyId: str, targetId: str) -> List[Annotation]:
-        pass
+        for processor in self.queryProcessors:
+            #????
+            if isinstance(processor, RelationalQueryProcessor):
+                result = [Annotation(identifier, body, target, motivation) for
+                          identifier, body, target, motivation in
+                          zip(processor.getAnnotationsWithBodyAndTarget(bodyId, targetId)['id'],
+                              processor.getAnnotationsWithBodyAndTarget(bodyId, targetId)['body'],
+                              processor.getAnnotationsWithBodyAndTarget(bodyId, targetId)['target'],
+                              processor.getAnnotationsWithBodyAndTarget(bodyId, targetId)['motivation'])]
+                return result
 
-    def getAnnotationsWithTarget(self, TargetId: str) -> List[Annotation]:
-        pass
+    def getAnnotationsWithTarget(self, targetId: str) -> List[Annotation]:
+        for processor in self.queryProcessors:
+            #????
+            if isinstance(processor, RelationalQueryProcessor):
+                result = [Annotation(identifier, body, target, motivation) for
+                          identifier, body, target, motivation in
+                          zip(processor.getAnnotationsWithTarget(targetId)['id'],
+                              processor.getAnnotationsWithTarget(targetId)['body'],
+                              processor.getAnnotationsWithTarget(targetId)['target'],
+                              processor.getAnnotationsWithTarget(targetId)['motivation'])]
+                return result
 
     def getCanvasesInCollection(self, collectionId: str) -> List[Canvas]:
         pass
@@ -538,7 +592,13 @@ class GenericQueryProcessor():
         pass
 
     def getImagesAnnotatingCanvas(self, canvasId: str) -> List[Image]:
-        pass
+        for processor in self.queryProcessors:
+            #????
+            if isinstance(processor, RelationalQueryProcessor):
+                result = [Image(identifier) for
+                          identifier in
+                          processor.getAnnotationsWithTarget(canvasId)['body']]
+                return result
 
     def getManifestsInCollection(self, collectionId: str) -> List[Manifest]:
         pass

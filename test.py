@@ -6,6 +6,8 @@ from pprint import pprint
 # Once all the classes are imported, first create the relational
 # database using the related source data
 
+pd.set_option('display.expand_frame_repr', False)
+
 rel_path = "relational.db"
 ann_dp = AnnotationProcessor()
 ann_dp.setDbPathOrUrl(rel_path)
@@ -40,4 +42,4 @@ generic = GenericQueryProcessor()
 generic.addQueryProcessor(grp_qp)
 generic.addQueryProcessor(rel_qp)
 
-print(grp_qp.getAllCollections())
+print(generic.getImagesAnnotatingCanvas('https://dl.ficlit.unibo.it/iiif/2/28429/canvas/p7'))

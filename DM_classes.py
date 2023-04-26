@@ -31,6 +31,7 @@ class Image(IdentifiableEntity):
 
 
 class EntityWithMetadata(IdentifiableEntity):
+    #???
     def __init__(self, identifier, label: str, title: str=None, creators: str=None):
         super().__init__(identifier)
         self.label = label
