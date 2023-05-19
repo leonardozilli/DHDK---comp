@@ -25,7 +25,6 @@ class AnnotationProcessor(Processor):
     def __init__(self):
         super().__init__()
 
-    #why does this returns bool??
     def uploadData(self, path: str) -> bool:
         try:
             data = read_csv(path, keep_default_na=False, dtype={
@@ -35,14 +34,15 @@ class AnnotationProcessor(Processor):
                                                               "motivation": "string"})
 
             annotations_id = []
+            #change iterrows
             for idx, row in data.iterrows():
-                annotations_id.append("annotation-" + str(idx))
+                annotations_id.append("Annotation_" + str(idx))
             data.insert(0, "internalId", Series(annotations_id, dtype="string"))
 
             df_images = data[["body"]]
             images_id = []
             for idx, row in df_images.iterrows():
-                images_id.append("image-" + str(idx))
+                images_id.append("Image_" + str(idx))
             df_images.insert(0, "internalId", Series(images_id, dtype="string"))
 
             df_images = df_images.rename(columns={'body': 'id'})
@@ -71,9 +71,6 @@ class MetadataProcessor(Processor):
     def __init__(self):
         super().__init__()
 
-    #why does this returns bool??
-    #where to get label??
-    #does one metadata file always hold one and only one collection??
     def uploadData(self, path: str) -> bool:
         try:
             df = read_csv(path, keep_default_na=False, dtype={
@@ -83,11 +80,8 @@ class MetadataProcessor(Processor):
             })
 
 
-            #do these need an internalId??
-            #query also possible, same performances, maybe more readable?
             entitycreator = []
             collectionItems = []
-
             collectionitems = dict()
             manifestitems = dict()
             targetcollection = None
@@ -103,7 +97,7 @@ class MetadataProcessor(Processor):
 
                 if row['id'].endswith('collection'):
                     targetcollection = row['id']
-                    collectionitems[targetcollection] = list()
+                    collectionites[targetcollection] = list()
                 elif row['id'].endswith('manifest'):
                     targetmanifest = row['id']
                     manifestitems[targetmanifest] = list()
