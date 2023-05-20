@@ -45,11 +45,7 @@ class EntityWithMetadata(IdentifiableEntity):
         return self.title
 
     def getCreators(self) -> List[str]:
-        if self.creators:
-            #needs to be modified
-            return self.creators.split('; ')
-        else:
-            return list()
+        return self.creators
 
 
 class Collection(EntityWithMetadata):
