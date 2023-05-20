@@ -18,20 +18,30 @@ class QueryProcessor(Processor):
         super().__init__()
 
     def getEntityById(self, entityId: str):
-        if '.db' in self.dbPathOrUrl: #this could be problematic [e.g. hidden files]
+        if self.dbPathOrUrl.endswith('.db'):
             with connect(self.dbPathOrUrl) as con:
                 query = f'''
-                    SELECT * FROM 'Collection' WHERE id == '{entityId}'
-                    UNION ALL
-                    SELECT * FROM 'Manifest' WHERE id == '{entityId}'
-                    UNION ALL
-                    SELECT * FROM 'Canvas' WHERE id == '{entityId}'
-                    UNION ALL
-                    SELECT * FROM 'Annotation' WHERE id == '{entityId}'
-                    UNION ALL
-                    SELECT * FROM 'Image' WHERE id == '{entityId}'
+                    SELECT id, creator, title, NULL AS body, NULL AS target, NULL AS motivation
+                    FROM Collection
+                    WHERE id = '{entityId}'
+                    UNION
+                    SELECT id, creator, title, NULL, NULL, NULL
+                    FROM Manifest
+                    WHERE id = '{entityId}'
+                    UNION
+                    SELECT id, creator, title, NULL, NULL, NULL
+                    FROM Canvas
+                    WHERE id = '{entityId}'
+                    UNION
+                    SELECT id, NULL, NULL, body, target, motivation
+                    FROM Annotation
+                    WHERE id = '{entityId}'
+                    UNION
+                    SELECT id, NULL, NULL, NULL, NULL, NULL
+                    FROM Image
+                    WHERE id = '{entityId}'
                     '''
-                df = pd.read_sql(query, con)
+                df = pd.read_sql(query, con).dropna(axis=1)
                 return df
         else:
             endpoint = SPARQLWrapper(self.dbPathOrUrl) 
@@ -57,11 +67,13 @@ class AnnotationProcessor(Processor):
         super().__init__()
 
     def uploadData(self, path: str) -> bool:
+        #separate function?
         try:
             with open("entity_counter.json", "r", encoding="utf-8") as f:
                 counter_data = json.load(f)
             ann_counter = counter_data['annotation']
             image_counter = counter_data['image']
+
         except FileNotFoundError:
             #singular o plural?
             #what if you upload the same data 2 times? the counter advances but the items remain the same??
@@ -129,6 +141,7 @@ class MetadataProcessor(Processor):
             coll_counter = counter_data['collection']
             man_counter = counter_data['manifest']
             canv_counter = counter_data['canvas']
+
         except FileNotFoundError:
             #singular o plural?
             #what if you upload the same data 2 times?
@@ -147,55 +160,41 @@ class MetadataProcessor(Processor):
             df = pd.read_csv(path, keep_default_na=False, dtype={
                                                             "id": "string",
                                                             "title": "string",
-                                                            "creator": "string"
-            })
+                                                            "creator": "string"})
 
-
-            entitycreator = []
-            collectionItems = []
-            collectionitems = dict()
-            manifestitems = dict()
-            targetcollection = None
-            targetmanifest = None
-            #Iteratively appending rows to a DataFrame can be more computationally intensive than a single concatenate. A better solution is to append those rows to a list and then concatenate the list with the original DataFrame all at once
-            for idx, row in df.iterrows():
-                if row['creator'] != '':
-                    if ';' in row['creator']:
-                        for creator in list(map(str.strip, row['creator'].split(';'))):
-                            entitycreator.append((row['id'], creator))
-                    else:
-                        entitycreator.append((row['id'], row['creator']))
-
-                if row['id'].endswith('collection'):
-                    targetcollection = row['id']
-                    collectionitems[targetcollection] = list()
-                elif row['id'].endswith('manifest'):
-                    targetmanifest = row['id']
-                    manifestitems[targetmanifest] = list()
-                    collectionitems[targetcollection].append(targetmanifest)
-                elif '/canvas' in row['id']:
-                    manifestitems[targetmanifest].append(row['id'])
+            with open("entity_counter.json", "r") as f:
+                counter_data = json.load(f)
 
 
             collections_df = df[df['id'].str.endswith('collection')]
             manifests_df = df[df['id'].str.endswith('manifest')]
             canvases_df = df[df['id'].str.contains('canvas')]
-            entitycreator_df = pd.DataFrame(entitycreator, columns=['id', 'creator'])
-            collectionitems_df = pd.DataFrame(
-                [(k, i) for k, v in collectionitems.items() for i in v],
-                columns=['id', 'item'])
 
-            manifestitems_df = pd.DataFrame(
-                [(k, i) for k, v in manifestitems.items() for i in v],
-                columns=['id', 'item'])
+            #do we REALLY need internal IDs? they dont seem to serve any essential purpose
+            collections_df.insert(0, "internalId", ["Collection_" + str(i) for i in range(counter_data['collection'], counter_data['collection'] + len(collections_df))])
+            manifests_df.insert(0, "internalId", ["Manifest_" + str(i) for i in range(counter_data['manifest'], counter_data['manifest'] + len(manifests_df))])
+            canvases_df.insert(0, "internalId", ["Canvas_" + str(i) for i in range(counter_data['canvas'], counter_data['canvas'] + len(canvases_df))])
+
+            counter_data['collection'] += len(collections_df)
+            counter_data['manifest'] += len(manifests_df)
+            counter_data['canvas'] += len(canvases_df)
+
+            with open("entity_counter.json", "w", encoding="utf-8") as updatedfile:
+                json.dump(counter_data, updatedfile, ensure_ascii=False, indent=4)
+
+            collection_creator_df = collections_df[collections_df['creator'] != ''][['internalId', 'creator']]
+            manifest_creator_df = manifests_df[manifests_df['creator'] != ''][['internalId', 'creator']]
+            canvas_creator_df = canvases_df[canvases_df['creator'] != ''][['internalId', 'creator']]
+
+            creator_df = pd.concat([collection_creator_df, manifest_creator_df, canvas_creator_df], ignore_index=True)
+            creator_df['creator'] = creator_df['creator'].str.split('; ')
+            creator_df = creator_df.explode('creator')
 
             with connect(self.dbPathOrUrl) as conn:
                 collections_df.to_sql('Collection', conn, if_exists="replace", index=False)
                 manifests_df.to_sql('Manifest', conn, if_exists="replace", index=False)
                 canvases_df.to_sql('Canvas', conn, if_exists="replace", index=False)
-                entitycreator_df.to_sql("EntityCreator", conn, if_exists="replace", index=False)
-                collectionitems_df.to_sql("CollectionItems", conn, if_exists="replace", index=False)
-                manifestitems_df.to_sql("ManifestItems", conn, if_exists="replace", index=False)
+                creator_df.to_sql("EntityCreator", conn, if_exists="replace", index=False)
 
             return True
 
@@ -240,18 +239,36 @@ class RelationalQueryProcessor(QueryProcessor):
 
     def getEntitiesWithCreator(self, creatorName: str):
         with connect(self.dbPathOrUrl) as con:
-            query = f"SELECT id, creator FROM EntityCreator WHERE creator == '{creatorName}'"
+            query = f'''
+                        SELECT c.id, c.creator, c.title, ecr.creator
+                        FROM Collection c
+                        JOIN EntityCreator ecr ON c.internalId = ecr.internalId
+                        WHERE ecr.Creator == '{creatorName}'
+                        UNION ALL
+                        SELECT m.id, m.creator, m.title, ecr.creator
+                        FROM Manifest m
+                        JOIN EntityCreator ecr ON m.internalId = ecr.internalId
+                        WHERE ecr.Creator == '{creatorName}'
+                        UNION ALL
+                        SELECT cv.id, cv.creator, cv.title, ecr.creator
+                        FROM Canvas cv
+                        JOIN EntityCreator ecr ON cv.internalId = ecr.internalId
+                        WHERE ecr.Creator == '{creatorName}'
+            '''
             df_sql = pd.read_sql(query, con)
         return df_sql
         
     def getEntitiesWithTitle(self, title: str):
         with connect(self.dbPathOrUrl) as con:
             query = f'''
-                SELECT id, title, creator FROM 'Collection' WHERE title == '{title}'
-                UNION
-                SELECT id, title, creator FROM 'Manifest' WHERE title == '{title}'
-                UNION
-                SELECT id, title, creator FROM 'Canvas' WHERE title == '{title}'
+                SELECT id, title, creator FROM 'Collection' 
+                WHERE title == '{title}'
+                UNION ALL
+                SELECT id, title, creator FROM 'Manifest' 
+                WHERE title == '{title}'
+                UNION ALL
+                SELECT id, title, creator FROM 'Canvas' 
+                WHERE title == '{title}'
             '''
             df_sql = pd.read_sql(query, con)
         return df_sql
