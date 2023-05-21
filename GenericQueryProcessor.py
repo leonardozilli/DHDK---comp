@@ -5,16 +5,13 @@ from GraphDBProcessor import *
 
 class GenericQueryProcessor():
     def __init__(self):
-        try:
-            self.queryProcessors = list()
-        except Exception as e:
-            print(e)
-
-            return False
+        self.queryProcessors = list()
 
     def cleanQueryProcessors(self) -> bool:
         try:
             self.queryProcessors = list()
+
+            return True
         except Exception as e:
             print(e)
 
@@ -23,6 +20,8 @@ class GenericQueryProcessor():
     def addQueryProcessor(self, processor: QueryProcessor) -> bool:
         try:
             self.queryProcessors.append(processor)
+
+            return True
         except Exception as e:
             print(e)
 
