@@ -38,4 +38,4 @@ generic = GenericQueryProcessor()
 generic.addQueryProcessor(rel_qp)
 generic.addQueryProcessor(grp_qp)
 
-print(generic.getAllCanvas())
+print(generic.getEntitiesWithTitle('Dante Alighieri: Opere')[0].getId())

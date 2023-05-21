@@ -181,17 +181,17 @@ class RelationalQueryProcessor(QueryProcessor):
     def getEntitiesWithCreator(self, creatorName: str):
         with connect(self.dbPathOrUrl) as con:
             query = f'''
-                        SELECT c.id, c.creator, c.title, ecr.creator
+                        SELECT c.id, c.creator, c.title
                         FROM Collection c
                         JOIN EntityCreator ecr ON c.internalId = ecr.internalId
                         WHERE ecr.Creator == '{creatorName}'
                         UNION ALL
-                        SELECT m.id, m.creator, m.title, ecr.creator
+                        SELECT m.id, m.creator, m.title
                         FROM Manifest m
                         JOIN EntityCreator ecr ON m.internalId = ecr.internalId
                         WHERE ecr.Creator == '{creatorName}'
                         UNION ALL
-                        SELECT cv.id, cv.creator, cv.title, ecr.creator
+                        SELECT cv.id, cv.creator, cv.title
                         FROM Canvas cv
                         JOIN EntityCreator ecr ON cv.internalId = ecr.internalId
                         WHERE ecr.Creator == '{creatorName}'

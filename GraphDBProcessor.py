@@ -165,17 +165,21 @@ class TriplestoreQueryProcessor(QueryProcessor):
             PREFIX lz: <http://leonardozilli.it/#>
             PREFIX schema: <https://schema.org/>
 
-            SELECT ?canvas
+            SELECT ?canvas ?label
             WHERE {{?collection schema:identifier "{collectionId}" ;
-                      lz:hasItems ?manifestid .
-                  ?manifest schema:identifier ?manifestid ;
-                     lz:hasItems ?canvas }}
+                          lz:hasItems ?manifestid .
+                    ?manifest schema:identifier ?manifestid ;
+                          lz:hasItems ?cid .
+                    ?canvas schema:identifier ?cid ;
+                          lz:Label ?label}}
         '''
 
         endpoint.setQuery(query)
         endpoint.setReturnFormat(JSON)
         result = endpoint.queryAndConvert()
-        return json_normalize(result['results']['bindings'])[['canvas.value']].rename(columns={'canvas.value' : 'id'})
+        return json_normalize(result['results']['bindings'])[['canvas.value', 
+                                                              'label.value']].rename(columns={'canvas.value' : 'id',
+                                                                                              'label.value' : 'label'})
 
     def getCanvasesInManifest(self, manifestId: str):
 
@@ -186,15 +190,19 @@ class TriplestoreQueryProcessor(QueryProcessor):
             PREFIX lz: <http://leonardozilli.it/#>
             PREFIX schema: <https://schema.org/>
 
-            SELECT ?canvas
+            SELECT ?canvas ?label
             WHERE {{?manifest schema:identifier "{manifestId}" .
-                   ?manifest lz:hasItems ?canvas}}
+                   ?manifest lz:hasItems ?cid .
+                    ?canvas schema:identifier ?cid ;
+                            lz:Label ?label}}
         '''
 
         endpoint.setQuery(query)
         endpoint.setReturnFormat(JSON)
         result = endpoint.queryAndConvert()
-        return json_normalize(result['results']['bindings'])[['canvas.value']].rename(columns={'canvas.value' : 'id'})
+        return json_normalize(result['results']['bindings'])[['canvas.value', 
+                                                              'label.value']].rename(columns={'canvas.value' : 'id',
+                                                                                              'label.value' : 'label'})
 
     def getManifestsInCollection(self, collectionId: str):
 

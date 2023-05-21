@@ -1,11 +1,13 @@
 import pandas as pd
 from sqlite3 import connect
+from SPARQLWrapper import SPARQLWrapper, JSON
+from string import Template
 
 
 class Processor():
     def __init__(self):
         self.dbPathOrUrl = ""
-    
+
     def getDbPathOrUrl(self) -> str:
         return self.dbPathOrUrl
 
@@ -51,19 +53,19 @@ class QueryProcessor(Processor):
                 return df
         else:
             endpoint = SPARQLWrapper(self.dbPathOrUrl) 
-
-            #what should this dataframe describe? surely not only the id?
             query = '''
                 PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
                 PREFIX lz: <http://leonardozilli.it/#>
                 PREFIX schema: <https://schema.org/>
 
-                SELECT ?id
-                WHERE { ?id schema:identifier "$ENID" }
+                SELECT ?id ?label
+                WHERE { ?id schema:identifier "$ENID" ;
+                            lz:Label ?label}
                     '''
 
             endpoint.setQuery(Template(query).substitute(ENID=entityId))
             endpoint.setReturnFormat(JSON)
             result = endpoint.queryAndConvert()
-            #not working with canvases
-            return json_normalize(result['results']['bindings'])[['id.value']].rename(columns={'id.value' : 'id'})
+            return pd.json_normalize(result['results']['bindings'])[['id.value',
+                                                          'label.value']].rename(columns={'id.value' : 'id',
+                                                                                          'label.value' : 'label'})
