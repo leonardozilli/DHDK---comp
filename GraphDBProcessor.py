@@ -90,12 +90,28 @@ class TriplestoreQueryProcessor(QueryProcessor):
             WHERE {?id a lz:Collection ;
                          lz:Label ?label }
             '''
+        items_query = '''
+            PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+            PREFIX lz: <http://leonardozilli.it/#>
+
+            SELECT ?id ?item
+            WHERE {?id a lz:Collection ;
+                     lz:hasItems ?item}
+        '''
+
         endpoint.setQuery(query)
         endpoint.setReturnFormat(JSON)
-        result = endpoint.queryAndConvert()
-        return json_normalize(result['results']['bindings'])[['id.value',
+        id_item = json_normalize(endpoint.queryAndConvert()['results']['bindings'])[['id.value',
                                                               'label.value']].rename(columns={'id.value' : 'id',
-                                                                                             'label.value' : 'label'})
+                                                                                              'label.value' : 'label'})
+        endpoint.setQuery(items_query)
+        endpoint.setReturnFormat(JSON)
+        items = json_normalize(endpoint.queryAndConvert()['results']['bindings'])[['id.value',
+                                                              'item.value']].rename(columns={'id.value' : 'id',
+                                                                                              'item.value' : 'items'}).groupby('id')['items'].apply(list).reset_index()
+        result = pd.merge(id_item, items, on='id', how='left')
+
+        return result
 
     def getAllManifests(self):
 
@@ -105,16 +121,33 @@ class TriplestoreQueryProcessor(QueryProcessor):
             PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
             PREFIX lz: <http://leonardozilli.it/#>
 
-            SELECT ?id ?label ?item
+            SELECT ?id ?label
             WHERE {?id a lz:Manifest ;
                      lz:Label ?label}
         '''
+
+        items_query = '''
+            PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+            PREFIX lz: <http://leonardozilli.it/#>
+
+            SELECT ?id ?item
+            WHERE {?id a lz:Manifest ;
+                     lz:hasItems ?item}
+        '''
+
         endpoint.setQuery(query)
         endpoint.setReturnFormat(JSON)
-        result = endpoint.queryAndConvert()
-        return json_normalize(result['results']['bindings'])[['id.value',
+        id_item = json_normalize(endpoint.queryAndConvert()['results']['bindings'])[['id.value',
                                                               'label.value']].rename(columns={'id.value' : 'id',
-                                                                                             'label.value' : 'label'})
+                                                                                              'label.value' : 'label'})
+        endpoint.setQuery(items_query)
+        endpoint.setReturnFormat(JSON)
+        items = json_normalize(endpoint.queryAndConvert()['results']['bindings'])[['id.value',
+                                                              'item.value']].rename(columns={'id.value' : 'id',
+                                                                                              'item.value' : 'items'}).groupby('id')['items'].apply(list).reset_index()
+        result = pd.merge(id_item, items, on='id', how='left')
+
+        return result
 
 
     def getAllCanvases(self):

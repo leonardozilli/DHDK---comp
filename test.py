@@ -9,7 +9,7 @@ from pprint import pprint
 # database using the related source data
 
 pd.set_option('display.expand_frame_repr', False)
-pd.set_option('display.max_colwidth', True)
+#pd.set_option('display.max_colwidth', True)
 
 rel_path = "relational.db"
 ann_dp = AnnotationProcessor()
@@ -38,4 +38,7 @@ generic = GenericQueryProcessor()
 generic.addQueryProcessor(rel_qp)
 generic.addQueryProcessor(grp_qp)
 
-print(generic.getEntitiesWithTitle('Dante Alighieri: Opere')[0].getId())
+for r in generic.getAllManifests():
+    pprint(r.getItems())
+
+

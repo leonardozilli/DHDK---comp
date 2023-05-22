@@ -60,7 +60,7 @@ class Collection(EntityWithMetadata):
 class Manifest(EntityWithMetadata):
     def __init__(self, identifier, label, title, creators, items):
         super().__init__(identifier, label, title, creators)
-        self.items = list()
+        self.items = items
 
     def getItems(self):
         return self.items
