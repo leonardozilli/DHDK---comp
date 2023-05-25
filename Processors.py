@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 from sqlite3 import connect
 from SPARQLWrapper import SPARQLWrapper, JSON
 from string import Template
@@ -66,6 +67,11 @@ class QueryProcessor(Processor):
             endpoint.setQuery(Template(query).substitute(ENID=entityId))
             endpoint.setReturnFormat(JSON)
             result = endpoint.queryAndConvert()
-            return pd.json_normalize(result['results']['bindings'])[['id.value',
+            try:
+                return pd.json_normalize(result['results']['bindings'])[['id.value',
                                                           'label.value']].rename(columns={'id.value' : 'id',
                                                                                           'label.value' : 'label'})
+            except KeyError:
+                #????
+                return pd.DataFrame({'id':[np.nan]})
+

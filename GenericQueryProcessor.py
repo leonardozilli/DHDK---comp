@@ -71,39 +71,31 @@ class GenericQueryProcessor():
                       final_df['creator'])]
         return result
 
-    #not done
     def getAllCollections(self) -> List[Collection]:
         self.queryProcessors = self.sortProcessors()
         tqp_df = self.queryProcessors[1].getAllCollections()
         rqp_df = pd.concat(tqp_df['id'].apply(self.queryProcessors[0].getEntityById).tolist())
         final_df = pd.merge(tqp_df, rqp_df, on='id', how='left')
 
-        result = [Collection(identifier, label, title, creator) for identifier, label, title, creator in
+        result = [Collection(identifier, label, title, creator, self.getManifestsInCollection(identifier)) for identifier, label, title, creator in
                   zip(final_df['id'],
                       final_df['label'],
                       final_df['title'],
                       final_df['creator'])]
         return result
 
-    #not done
     def getAllManifests(self) -> List[Manifest]:
         self.queryProcessors = self.sortProcessors()
         tqp_df = self.queryProcessors[1].getAllManifests()
         rqp_df = pd.concat(tqp_df['id'].apply(self.queryProcessors[0].getEntityById).tolist())
         final_df = pd.merge(tqp_df, rqp_df, on='id', how='left')
 
-        result = [Manifest(identifier, label, title, creator, items) for identifier, label, title, creator, items in
+        result = [Manifest(identifier, label, title, creator, self.getCanvasesInManifest(identifier)) for identifier, label, title, creator, items in
                   zip(final_df['id'],
                       final_df['label'],
                       final_df['title'],
                       final_df['creator'],
-                      final_df['items'].apply(lambda item:[Canvas(identifier,
-                                                                  label, title,
-                                                                  creator) for
-                                                           identifier, label,
-                                                           title, creator in
-                                                           i for i in
-                                                           item]))]
+                      final_df['items'])]
         return result
 
     def getAnnotationsToCanvas(self, canvasId: str) -> List[Annotation]:
@@ -175,7 +167,10 @@ class GenericQueryProcessor():
     def getCanvasesInCollection(self, collectionId: str) -> List[Canvas]:
         self.queryProcessors = self.sortProcessors()
         tqp_df = self.queryProcessors[1].getCanvasesInCollection(collectionId)
-        rqp_df = pd.concat(tqp_df['id'].apply(self.queryProcessors[0].getEntityById).tolist())
+        try:
+            rqp_df = pd.concat(tqp_df['id'].apply(self.queryProcessors[0].getEntityById).tolist())
+        except ValueError:
+            return list()
         final_df = pd.merge(tqp_df, rqp_df, on='id', how='left')
 
         result = [Canvas(identifier, label, title, creator) for identifier, label, title, creator in
@@ -188,10 +183,29 @@ class GenericQueryProcessor():
     def getCanvasesInManifest(self, manifestId: str) -> List[Manifest]:
         self.queryProcessors = self.sortProcessors()
         tqp_df = self.queryProcessors[1].getCanvasesInManifest(manifestId)
-        rqp_df = pd.concat(tqp_df['id'].apply(self.queryProcessors[0].getEntityById).tolist())
+        try:
+            rqp_df = pd.concat(tqp_df['id'].apply(self.queryProcessors[0].getEntityById).tolist())
+        except ValueError:
+            return list()
         final_df = pd.merge(tqp_df, rqp_df, on='id', how='left')
 
         result = [Canvas(identifier, label, title, creator) for identifier, label, title, creator in
+                  zip(final_df['id'],
+                      final_df['label'],
+                      final_df['title'],
+                      final_df['creator'])]
+        return result
+
+    def getManifestsInCollection(self, manifestId: str) -> List[Manifest]:
+        self.queryProcessors = self.sortProcessors()
+        tqp_df = self.queryProcessors[1].getManifestsInCollection(manifestId)
+        try:
+            rqp_df = pd.concat(tqp_df['id'].apply(self.queryProcessors[0].getEntityById).tolist())
+        except ValueError:
+            return list()
+        final_df = pd.merge(tqp_df, rqp_df, on='id', how='left')
+
+        result = [Manifest(identifier, label, title, creator, self.getCanvasesInManifest(identifier)) for identifier, label, title, creator in
                   zip(final_df['id'],
                       final_df['label'],
                       final_df['title'],
@@ -202,13 +216,16 @@ class GenericQueryProcessor():
         self.queryProcessors = self.sortProcessors()
         try:
             return IdentifiableEntity(self.queryProcessors[0].getEntityById(entityId)['id'].astype(str).values[0])
-        except Exception:
+        except IndexError:
             return IdentifiableEntity(self.queryProcessors[1].getEntityById(entityId)['id'].astype(str).values[0])
 
     def getEntitiesWithCreator(self, creatorName: str) -> List[EntityWithMetadata]:
         self.queryProcessors = self.sortProcessors()
         tqp_df = self.queryProcessors[0].getEntitiesWithCreator(creatorName)
-        rqp_df = pd.concat(tqp_df['id'].apply(self.queryProcessors[1].getEntityById).tolist())
+        try:
+            rqp_df = pd.concat(tqp_df['id'].apply(self.queryProcessors[1].getEntityById).tolist())
+        except ValueError:
+            return list()
         final_df = pd.merge(tqp_df, rqp_df, on='id', how='left')
 
         result = [EntityWithMetadata(identifier, label, title, creator) for identifier, label, title, creator in
@@ -221,7 +238,10 @@ class GenericQueryProcessor():
     def getEntitiesWithLabel(self, label: str) -> List[EntityWithMetadata]:
         self.queryProcessors = self.sortProcessors()
         tqp_df = self.queryProcessors[1].getEntitiesWithLabel(label)
-        rqp_df = pd.concat(tqp_df['id'].apply(self.queryProcessors[0].getEntityById).tolist())
+        try:
+            rqp_df = pd.concat(tqp_df['id'].apply(self.queryProcessors[0].getEntityById).tolist())
+        except ValueError:
+            return list()
         final_df = pd.merge(tqp_df, rqp_df, on='id', how='left')
 
         result = [EntityWithMetadata(identifier, label, title, creator) for identifier, label, title, creator in
@@ -234,7 +254,10 @@ class GenericQueryProcessor():
     def getEntitiesWithTitle(self, title: str) -> List[EntityWithMetadata]:
         self.queryProcessors = self.sortProcessors()
         tqp_df = self.queryProcessors[0].getEntitiesWithTitle(title)
-        rqp_df = pd.concat(tqp_df['id'].apply(self.queryProcessors[1].getEntityById).tolist())
+        try:
+            rqp_df = pd.concat(tqp_df['id'].apply(self.queryProcessors[1].getEntityById).tolist())
+        except ValueError:
+            return list()
         final_df = pd.merge(tqp_df, rqp_df, on='id', how='left')
 
         result = [EntityWithMetadata(identifier, label, title, creator) for identifier, label, title, creator in
@@ -252,7 +275,5 @@ class GenericQueryProcessor():
                           processor.getAnnotationsWithTarget(canvasId)['body']]
                 return result
 
-    def getManifestsInCollection(self, collectionId: str) -> List[Manifest]:
-        pass
 
 #maybe handle exceptions when nothing is found??

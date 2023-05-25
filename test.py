@@ -38,7 +38,11 @@ generic = GenericQueryProcessor()
 generic.addQueryProcessor(rel_qp)
 generic.addQueryProcessor(grp_qp)
 
-for r in generic.getAllManifests():
-    pprint(r.getItems())
+r = generic.getCanvasesInCollection('test')
+e = generic.getEntitiesWithCreator('te')
 
 
+for i in r:
+    pass
+
+print(e)

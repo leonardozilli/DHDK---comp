@@ -83,34 +83,25 @@ class TriplestoreQueryProcessor(QueryProcessor):
         endpoint = SPARQLWrapper(self.getDbPathOrUrl()) 
 
         query = '''
-            PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+            PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
             PREFIX lz: <http://leonardozilli.it/#>
 
-            SELECT ?id ?label
-            WHERE {?id a lz:Collection ;
-                         lz:Label ?label }
-            '''
-        items_query = '''
-            PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-            PREFIX lz: <http://leonardozilli.it/#>
-
-            SELECT ?id ?item
-            WHERE {?id a lz:Collection ;
-                     lz:hasItems ?item}
+            SELECT ?id ?label (GROUP_CONCAT(DISTINCT ?item; SEPARATOR=', ') AS ?items)
+            WHERE {
+              {?id a lz:Collection ;
+                   lz:Label ?label ;
+                   lz:hasItems ?item }
+            }
+            GROUP BY ?id ?label
         '''
 
         endpoint.setQuery(query)
         endpoint.setReturnFormat(JSON)
-        id_item = json_normalize(endpoint.queryAndConvert()['results']['bindings'])[['id.value',
-                                                              'label.value']].rename(columns={'id.value' : 'id',
-                                                                                              'label.value' : 'label'})
-        endpoint.setQuery(items_query)
-        endpoint.setReturnFormat(JSON)
-        items = json_normalize(endpoint.queryAndConvert()['results']['bindings'])[['id.value',
-                                                              'item.value']].rename(columns={'id.value' : 'id',
-                                                                                              'item.value' : 'items'}).groupby('id')['items'].apply(list).reset_index()
-        result = pd.merge(id_item, items, on='id', how='left')
-
+        result = json_normalize(endpoint.queryAndConvert()['results']['bindings'])[['id.value',
+                                                              'label.value', 'items.value']].rename(columns={'id.value' : 'id',
+                                                                                              'label.value' : 'label',
+                                                                                              'items.value' : 'items'})
+        result['items'] = result['items'].apply(lambda item: item.split(', '))
         return result
 
     def getAllManifests(self):
@@ -118,34 +109,25 @@ class TriplestoreQueryProcessor(QueryProcessor):
         endpoint = SPARQLWrapper(self.getDbPathOrUrl()) 
 
         query = '''
-            PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+            PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
             PREFIX lz: <http://leonardozilli.it/#>
 
-            SELECT ?id ?label
-            WHERE {?id a lz:Manifest ;
-                     lz:Label ?label}
-        '''
-
-        items_query = '''
-            PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-            PREFIX lz: <http://leonardozilli.it/#>
-
-            SELECT ?id ?item
-            WHERE {?id a lz:Manifest ;
-                     lz:hasItems ?item}
+            SELECT ?id ?label (GROUP_CONCAT(DISTINCT ?item; SEPARATOR=', ') AS ?items)
+            WHERE {
+              {?id a lz:Manifest ;
+                   lz:Label ?label ;
+                   lz:hasItems ?item }
+            }
+            GROUP BY ?id ?label
         '''
 
         endpoint.setQuery(query)
         endpoint.setReturnFormat(JSON)
-        id_item = json_normalize(endpoint.queryAndConvert()['results']['bindings'])[['id.value',
-                                                              'label.value']].rename(columns={'id.value' : 'id',
-                                                                                              'label.value' : 'label'})
-        endpoint.setQuery(items_query)
-        endpoint.setReturnFormat(JSON)
-        items = json_normalize(endpoint.queryAndConvert()['results']['bindings'])[['id.value',
-                                                              'item.value']].rename(columns={'id.value' : 'id',
-                                                                                              'item.value' : 'items'}).groupby('id')['items'].apply(list).reset_index()
-        result = pd.merge(id_item, items, on='id', how='left')
+        result = json_normalize(endpoint.queryAndConvert()['results']['bindings'])[['id.value',
+                                                              'label.value', 'items.value']].rename(columns={'id.value' : 'id',
+                                                                                              'label.value' : 'label',
+                                                                                              'items.value' : 'items'})
+        result['items'] = result['items'].apply(lambda item: item.split(', '))
 
         return result
 
@@ -184,9 +166,12 @@ class TriplestoreQueryProcessor(QueryProcessor):
         endpoint.setQuery(query)
         endpoint.setReturnFormat(JSON)
         result = endpoint.queryAndConvert()
-        return json_normalize(result['results']['bindings'])[['id.value',
+        try:
+            return json_normalize(result['results']['bindings'])[['id.value',
                                                               'label.value']].rename(columns={'id.value' : 'id', 
                                                                                               'label.value' : 'label'})
+        except KeyError:
+            return pd.DataFrame({'id':[]})
 
 
     def getCanvasesInCollection(self, collectionId: str):
@@ -210,9 +195,12 @@ class TriplestoreQueryProcessor(QueryProcessor):
         endpoint.setQuery(query)
         endpoint.setReturnFormat(JSON)
         result = endpoint.queryAndConvert()
-        return json_normalize(result['results']['bindings'])[['canvas.value', 
+        try:
+            return json_normalize(result['results']['bindings'])[['canvas.value', 
                                                               'label.value']].rename(columns={'canvas.value' : 'id',
                                                                                               'label.value' : 'label'})
+        except KeyError:
+            return pd.DataFrame({'id':[]})
 
     def getCanvasesInManifest(self, manifestId: str):
 
@@ -224,8 +212,8 @@ class TriplestoreQueryProcessor(QueryProcessor):
             PREFIX schema: <https://schema.org/>
 
             SELECT ?canvas ?label
-            WHERE {{?manifest schema:identifier "{manifestId}" .
-                   ?manifest lz:hasItems ?cid .
+            WHERE {{?manifest schema:identifier "{manifestId}" ;
+                            lz:hasItems ?cid .
                     ?canvas schema:identifier ?cid ;
                             lz:Label ?label}}
         '''
@@ -233,9 +221,12 @@ class TriplestoreQueryProcessor(QueryProcessor):
         endpoint.setQuery(query)
         endpoint.setReturnFormat(JSON)
         result = endpoint.queryAndConvert()
-        return json_normalize(result['results']['bindings'])[['canvas.value', 
+        try:
+            return json_normalize(result['results']['bindings'])[['canvas.value', 
                                                               'label.value']].rename(columns={'canvas.value' : 'id',
                                                                                               'label.value' : 'label'})
+        except KeyError:
+            return pd.DataFrame({'id':[]})
 
     def getManifestsInCollection(self, collectionId: str):
 
@@ -248,11 +239,18 @@ class TriplestoreQueryProcessor(QueryProcessor):
 
             SELECT ?manifest ?label
             WHERE {{?collection schema:identifier "{collectionId}" ;
-                         lz:hasItems ?manifest }}
+                         lz:hasItems ?mid .
+                    ?manifest schema:identifier ?mid ;
+                         lz:Label ?label}}
         '''
 
         endpoint.setQuery(query)
         endpoint.setReturnFormat(JSON)
         result = endpoint.queryAndConvert()
-        return json_normalize(result['results']['bindings'])[['manifest.value']].rename(columns={'manifest.value' : 'id'})
+        try:
+            return json_normalize(result['results']['bindings'])[['manifest.value',
+                                                              'label.value']].rename(columns={'manifest.value' : 'id',
+                                                                                              'label.value' : 'label'})
+        except KeyError:
+            return pd.DataFrame({'id':[]})
 
