@@ -171,7 +171,7 @@ class TriplestoreQueryProcessor(QueryProcessor):
                                                               'label.value']].rename(columns={'id.value' : 'id', 
                                                                                               'label.value' : 'label'})
         except KeyError:
-            return pd.DataFrame({'id':[]})
+            return pd.DataFrame({'id' : []})
 
 
     def getCanvasesInCollection(self, collectionId: str):
@@ -200,7 +200,7 @@ class TriplestoreQueryProcessor(QueryProcessor):
                                                               'label.value']].rename(columns={'canvas.value' : 'id',
                                                                                               'label.value' : 'label'})
         except KeyError:
-            return pd.DataFrame({'id':[]})
+            return pd.DataFrame({'id' : []})
 
     def getCanvasesInManifest(self, manifestId: str):
 
@@ -226,7 +226,7 @@ class TriplestoreQueryProcessor(QueryProcessor):
                                                               'label.value']].rename(columns={'canvas.value' : 'id',
                                                                                               'label.value' : 'label'})
         except KeyError:
-            return pd.DataFrame({'id':[]})
+            return pd.DataFrame({'id' : []})
 
     def getManifestsInCollection(self, collectionId: str):
 
@@ -252,5 +252,5 @@ class TriplestoreQueryProcessor(QueryProcessor):
                                                               'label.value']].rename(columns={'manifest.value' : 'id',
                                                                                               'label.value' : 'label'})
         except KeyError:
-            return pd.DataFrame({'id':[]})
+            return pd.DataFrame({'id' : []})
 

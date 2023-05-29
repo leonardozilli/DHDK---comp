@@ -17,6 +17,9 @@ class GenericQueryProcessor():
 
             return False
 
+    def getList(self):
+        return self.queryProcessors
+
     def addQueryProcessor(self, processor: QueryProcessor) -> bool:
         try:
             self.queryProcessors.append(processor)
@@ -45,7 +48,7 @@ class GenericQueryProcessor():
     def getAllAnnotations(self) -> List[Annotation]:
         for processor in self.queryProcessors:
             if isinstance(processor, RelationalQueryProcessor):
-                result = [Annotation(identifier, body, target, motivation) for identifier, body, target, motivation in 
+                result = [Annotation(identifier, Image(body), IdentifiableEntity(target), motivation) for identifier, body, target, motivation in 
                           zip(processor.getAllAnnotations()['id'], 
                               processor.getAllAnnotations()['body'], 
                               processor.getAllAnnotations()['target'], 
