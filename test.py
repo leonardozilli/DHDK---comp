@@ -14,32 +14,40 @@ pd.set_option('display.expand_frame_repr', False)
 rel_path = "relational.db"
 ann_dp = AnnotationProcessor()
 ann_dp.setDbPathOrUrl(rel_path)
-#ann_dp.uploadData("data/annotations.csv")
+ann_dp.uploadData("data/annotations.csv")
 
 
 met_dp = MetadataProcessor()
 met_dp.setDbPathOrUrl(rel_path)
-#met_dp.uploadData("data/metadata.csv")
+met_dp.uploadData("data/metadata.csv")
 
 rel_qp = RelationalQueryProcessor()
 rel_qp.setDbPathOrUrl(rel_path)
-
+#
 grp_endpoint = "http://127.0.0.1:9999/blazegraph/sparql"
 col_dp = CollectionProcessor()
 col_dp.setDbPathOrUrl(grp_endpoint)
 #col_dp.uploadData("data/collection-1.json")
-#col_dp.uploadData("data/collection-2.json")
-
+col_dp.uploadData("data/collection-2.json")
+#
 grp_qp = TriplestoreQueryProcessor()
 grp_qp.setDbPathOrUrl(grp_endpoint)
-
-
+#
+#
 generic = GenericQueryProcessor()
 generic.addQueryProcessor(rel_qp)
 generic.addQueryProcessor(grp_qp)
-
-r = generic.getAllAnnotations()
+#
+r = generic.getAllCollections()
+#
 
 for i in r:
-    print(i.getBody(), type(i.getBody()))
-    print(i.getTarget(), type(i.getTarget()))
+    print(type(i.getId()))
+    print(type(i.getLabel()))
+    print(type(i.getTitle()))
+    print(type(i.getCreators()))
+    print(type(i.getItems()))
+    print('---')
+
+
+print(generic.getEntityById('https://dl.ficlit.unibo.it/iiif/2/28429/manifest'))

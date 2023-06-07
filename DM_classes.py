@@ -31,12 +31,11 @@ class Image(IdentifiableEntity):
 
 
 class EntityWithMetadata(IdentifiableEntity):
-    #???
-    def __init__(self, identifier, label: str, title: str=None, creators: str=None):
+    def __init__(self, identifier, label: str, title: str, creators: str):
         super().__init__(identifier)
         self.label = label
         self.title = title
-        self.creators = creators
+        self.creators = creators.split('; ')
 
     def getLabel(self) -> str:
         return self.label
@@ -68,5 +67,5 @@ class Manifest(EntityWithMetadata):
 
 class Canvas(EntityWithMetadata):
     def __init__(self, identifier, label, title, creators):
-        super().__init__(label, title, creators)
+        super().__init__(identifier, label, title, creators)
 

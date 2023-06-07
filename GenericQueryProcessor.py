@@ -17,9 +17,6 @@ class GenericQueryProcessor():
 
             return False
 
-    def getList(self):
-        return self.queryProcessors
-
     def addQueryProcessor(self, processor: QueryProcessor) -> bool:
         try:
             self.queryProcessors.append(processor)
@@ -64,7 +61,7 @@ class GenericQueryProcessor():
     def getAllCanvas(self) -> List[Canvas]:
         self.queryProcessors = self.sortProcessors()
         tqp_df = self.queryProcessors[1].getAllCanvases()
-        rqp_df = pd.concat(tqp_df['id'].apply(self.queryProcessors[0].getEntityById).tolist())
+        rqp_df = pd.concat(tqp_df['id'].apply(self.queryProcessors[0].getEntityById).tolist(), ignore_index=True)
         final_df = pd.merge(tqp_df, rqp_df, on='id', how='left')
 
         result = [Canvas(identifier, label, title, creator) for identifier, label, title, creator in
@@ -78,7 +75,7 @@ class GenericQueryProcessor():
         self.queryProcessors = self.sortProcessors()
         tqp_df = self.queryProcessors[1].getAllCollections()
         rqp_df = pd.concat(tqp_df['id'].apply(self.queryProcessors[0].getEntityById).tolist())
-        final_df = pd.merge(tqp_df, rqp_df, on='id', how='left')
+        final_df = pd.merge(tqp_df, rqp_df, on='id', how='left').replace({np.nan:''})
 
         result = [Collection(identifier, label, title, creator, self.getManifestsInCollection(identifier)) for identifier, label, title, creator in
                   zip(final_df['id'],
@@ -218,9 +215,12 @@ class GenericQueryProcessor():
     def getEntityById(self, entityId: str) -> IdentifiableEntity:
         self.queryProcessors = self.sortProcessors()
         try:
-            return IdentifiableEntity(self.queryProcessors[0].getEntityById(entityId)['id'].astype(str).values[0])
-        except IndexError:
-            return IdentifiableEntity(self.queryProcessors[1].getEntityById(entityId)['id'].astype(str).values[0])
+            try:
+                return IdentifiableEntity(self.queryProcessors[0].getEntityById(entityId)['id'].astype(str).values[0])
+            except IndexError:
+                return IdentifiableEntity(self.queryProcessors[1].getEntityById(entityId)['id'].astype(str).values[0])
+        except KeyError:
+            raise Exception('No record found!')
 
     def getEntitiesWithCreator(self, creatorName: str) -> List[EntityWithMetadata]:
         self.queryProcessors = self.sortProcessors()

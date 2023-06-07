@@ -8,50 +8,15 @@ class AnnotationProcessor(Processor):
         super().__init__()
 
     def uploadData(self, path: str) -> bool:
-        #separate function?
-        try:
-            with open("entity_counter.json", "r", encoding="utf-8") as f:
-                counter_data = json.load(f)
-            ann_counter = counter_data['annotation']
-            image_counter = counter_data['image']
-
-        except FileNotFoundError:
-            #singular o plural?
-            #what if you upload the same data 2 times? the counter advances but the items remain the same??
-            entity_counter = {
-                "annotation": 0,
-                "image": 0,
-                "collection": 0,
-                "manifest": 0,
-                "canvas": 0
-            }
-
-            with open("entity_counter.json", "w", encoding="utf-8") as newfile:
-                json.dump(entity_counter, newfile, ensure_ascii=False, indent=4)
-
-
         try:
             data = pd.read_csv(path, keep_default_na=False, dtype={
                                                               "id": "string",
                                                               "body": "string",
                                                               "target": "string",
                                                               "motivation": "string"})
-            with open("entity_counter.json", "r") as f:
-                counter_data = json.load(f)
-
-            #numpy possible
-            data.insert(0, "internalId", ["Annotation_" + str(i) for i in range(counter_data['annotation'], counter_data['annotation'] + len(data))])
 
             df_images = data[["body"]]
-            df_images.insert(0, "internalId", ["Image_" + str(i) for i in range(counter_data['image'], counter_data['image'] + len(df_images))])
             df_images = df_images.rename(columns={'body': 'id'})
-
-
-            counter_data['annotation'] += len(data)
-            counter_data['image'] += len(df_images) 
-
-            with open("entity_counter.json", "w", encoding="utf-8") as updatedfile:
-                json.dump(counter_data, updatedfile, ensure_ascii=False, indent=4)
 
             with connect(self.dbPathOrUrl) as conn:
                 data.to_sql('Annotation', conn, if_exists="replace", index=False, dtype={
@@ -60,9 +25,7 @@ class AnnotationProcessor(Processor):
                                                                                       "target": "string",
                                                                                       "motivation": "string"})
                 
-                df_images.to_sql('Image', conn, if_exists="replace", index=False, dtype={
-                                                                                        "internalId": "string",
-                                                                                         "id": "string"})
+                df_images.to_sql('Image', conn, if_exists="replace", index=False, dtype={"id": "string"})
             return True
 
         except Exception as e:
@@ -77,55 +40,18 @@ class MetadataProcessor(Processor):
 
     def uploadData(self, path: str) -> bool:
         try:
-            with open("entity_counter.json", "r", encoding="utf-8") as f:
-                counter_data = json.load(f)
-            coll_counter = counter_data['collection']
-            man_counter = counter_data['manifest']
-            canv_counter = counter_data['canvas']
-
-        except FileNotFoundError:
-            #singular o plural?
-            #what if you upload the same data 2 times?
-            entity_counter = {
-                "annotation": 0,
-                "image": 0,
-                "collection": 0,
-                "manifest": 0,
-                "canvas": 0
-            }
-
-            with open("entity_counter.json", "w", encoding="utf-8") as newfile:
-                json.dump(entity_counter, newfile, ensure_ascii=False, indent=4)
-
-        try:
             df = pd.read_csv(path, keep_default_na=False, dtype={
                                                             "id": "string",
                                                             "title": "string",
                                                             "creator": "string"})
 
-            with open("entity_counter.json", "r") as f:
-                counter_data = json.load(f)
-
-
             collections_df = df[df['id'].str.endswith('collection')]
             manifests_df = df[df['id'].str.endswith('manifest')]
             canvases_df = df[df['id'].str.contains('canvas')]
 
-            #do we REALLY need internal IDs? they dont seem to serve any essential purpose
-            collections_df.insert(0, "internalId", ["Collection_" + str(i) for i in range(counter_data['collection'], counter_data['collection'] + len(collections_df))])
-            manifests_df.insert(0, "internalId", ["Manifest_" + str(i) for i in range(counter_data['manifest'], counter_data['manifest'] + len(manifests_df))])
-            canvases_df.insert(0, "internalId", ["Canvas_" + str(i) for i in range(counter_data['canvas'], counter_data['canvas'] + len(canvases_df))])
-
-            counter_data['collection'] += len(collections_df)
-            counter_data['manifest'] += len(manifests_df)
-            counter_data['canvas'] += len(canvases_df)
-
-            with open("entity_counter.json", "w", encoding="utf-8") as updatedfile:
-                json.dump(counter_data, updatedfile, ensure_ascii=False, indent=4)
-
-            collection_creator_df = collections_df[collections_df['creator'] != ''][['internalId', 'creator']]
-            manifest_creator_df = manifests_df[manifests_df['creator'] != ''][['internalId', 'creator']]
-            canvas_creator_df = canvases_df[canvases_df['creator'] != ''][['internalId', 'creator']]
+            collection_creator_df = collections_df[collections_df['creator'] != ''][['id', 'creator']]
+            manifest_creator_df = manifests_df[manifests_df['creator'] != ''][['id', 'creator']]
+            canvas_creator_df = canvases_df[canvases_df['creator'] != ''][['id', 'creator']]
 
             creator_df = pd.concat([collection_creator_df, manifest_creator_df, canvas_creator_df], ignore_index=True)
             creator_df['creator'] = creator_df['creator'].str.split('; ')
@@ -181,20 +107,20 @@ class RelationalQueryProcessor(QueryProcessor):
     def getEntitiesWithCreator(self, creatorName: str):
         with connect(self.dbPathOrUrl) as con:
             query = f'''
-                        SELECT c.id, c.creator, c.title
-                        FROM Collection c
-                        JOIN EntityCreator ecr ON c.internalId = ecr.internalId
-                        WHERE ecr.Creator == '{creatorName}'
-                        UNION ALL
-                        SELECT m.id, m.creator, m.title
-                        FROM Manifest m
-                        JOIN EntityCreator ecr ON m.internalId = ecr.internalId
-                        WHERE ecr.Creator == '{creatorName}'
-                        UNION ALL
-                        SELECT cv.id, cv.creator, cv.title
-                        FROM Canvas cv
-                        JOIN EntityCreator ecr ON cv.internalId = ecr.internalId
-                        WHERE ecr.Creator == '{creatorName}'
+                SELECT c.id, c.creator, c.title
+                FROM Collection c
+                JOIN EntityCreator ecr ON c.id = ecr.id
+                WHERE ecr.Creator == '{creatorName}'
+                UNION ALL
+                SELECT m.id, m.creator, m.title
+                FROM Manifest m
+                JOIN EntityCreator ecr ON m.id = ecr.id
+                WHERE ecr.Creator == '{creatorName}'
+                UNION ALL
+                SELECT cv.id, cv.creator, cv.title
+                FROM Canvas cv
+                JOIN EntityCreator ecr ON cv.id = ecr.id
+                WHERE ecr.Creator == '{creatorName}'
             '''
             df_sql = pd.read_sql(query, con)
         return df_sql
