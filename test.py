@@ -28,7 +28,7 @@ grp_endpoint = "http://127.0.0.1:9999/blazegraph/sparql"
 col_dp = CollectionProcessor()
 col_dp.setDbPathOrUrl(grp_endpoint)
 #col_dp.uploadData("data/collection-1.json")
-col_dp.uploadData("data/collection-2.json")
+#col_dp.uploadData("data/collection-2.json")
 #
 grp_qp = TriplestoreQueryProcessor()
 grp_qp.setDbPathOrUrl(grp_endpoint)
@@ -38,16 +38,15 @@ generic = GenericQueryProcessor()
 generic.addQueryProcessor(rel_qp)
 generic.addQueryProcessor(grp_qp)
 #
-r = generic.getAllCollections()
+r = rel_qp.getEntityById('https://dl.ficlit.unibo.it/iiif/28429/collection')
+print(r)
 #
+#for i in r:
+#    print(i.getid())
+#    print(i.getlabel())
+#    print(i.gettitle())
+#    print(i.getcreators(), i.creators)
+#    print(i.getitems())
+#    print('---')
+#print('---')
 
-for i in r:
-    print(type(i.getId()))
-    print(type(i.getLabel()))
-    print(type(i.getTitle()))
-    print(type(i.getCreators()))
-    print(type(i.getItems()))
-    print('---')
-
-
-print(generic.getEntityById('https://dl.ficlit.unibo.it/iiif/2/28429/manifest'))

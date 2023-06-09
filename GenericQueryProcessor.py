@@ -28,7 +28,8 @@ class GenericQueryProcessor():
             return False
 
     def sortProcessors(self):
-        proc_set = set(self.queryProcessors) 
+        proc_set = set(self.queryProcessors)
+        #list comprehension
         sorted_processors = sorted([proc for proc in proc_set], key=lambda obj:type(obj).__name__)
 
         if len(sorted_processors) > 1:
@@ -220,7 +221,7 @@ class GenericQueryProcessor():
             except IndexError:
                 return IdentifiableEntity(self.queryProcessors[1].getEntityById(entityId)['id'].astype(str).values[0])
         except KeyError:
-            raise Exception('No record found!')
+            raise Exception('No entity found!')
 
     def getEntitiesWithCreator(self, creatorName: str) -> List[EntityWithMetadata]:
         self.queryProcessors = self.sortProcessors()

@@ -31,15 +31,7 @@ class QueryProcessor(Processor):
             with connect(self.dbPathOrUrl) as con:
                 query = f'''
                     SELECT id, creator, title, NULL AS body, NULL AS target, NULL AS motivation
-                    FROM Collection
-                    WHERE id = '{entityId}'
-                    UNION
-                    SELECT id, creator, title, NULL, NULL, NULL
-                    FROM Manifest
-                    WHERE id = '{entityId}'
-                    UNION
-                    SELECT id, creator, title, NULL, NULL, NULL
-                    FROM Canvas
+                    FROM Metadata
                     WHERE id = '{entityId}'
                     UNION
                     SELECT id, NULL, NULL, body, target, motivation

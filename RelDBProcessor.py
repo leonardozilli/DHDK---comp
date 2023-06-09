@@ -45,22 +45,12 @@ class MetadataProcessor(Processor):
                                                             "title": "string",
                                                             "creator": "string"})
 
-            collections_df = df[df['id'].str.endswith('collection')]
-            manifests_df = df[df['id'].str.endswith('manifest')]
-            canvases_df = df[df['id'].str.contains('canvas')]
-
-            collection_creator_df = collections_df[collections_df['creator'] != ''][['id', 'creator']]
-            manifest_creator_df = manifests_df[manifests_df['creator'] != ''][['id', 'creator']]
-            canvas_creator_df = canvases_df[canvases_df['creator'] != ''][['id', 'creator']]
-
-            creator_df = pd.concat([collection_creator_df, manifest_creator_df, canvas_creator_df], ignore_index=True)
+            creator_df = df[df['creator'] != ''][['id', 'creator']]
             creator_df['creator'] = creator_df['creator'].str.split('; ')
             creator_df = creator_df.explode('creator')
 
             with connect(self.dbPathOrUrl) as conn:
-                collections_df.to_sql('Collection', conn, if_exists="replace", index=False)
-                manifests_df.to_sql('Manifest', conn, if_exists="replace", index=False)
-                canvases_df.to_sql('Canvas', conn, if_exists="replace", index=False)
+                df.to_sql('Metadata', conn, if_exists="replace", index=False)
                 creator_df.to_sql("EntityCreator", conn, if_exists="replace", index=False)
 
             return True
@@ -107,20 +97,10 @@ class RelationalQueryProcessor(QueryProcessor):
     def getEntitiesWithCreator(self, creatorName: str):
         with connect(self.dbPathOrUrl) as con:
             query = f'''
-                SELECT c.id, c.creator, c.title
-                FROM Collection c
-                JOIN EntityCreator ecr ON c.id = ecr.id
-                WHERE ecr.Creator == '{creatorName}'
-                UNION ALL
                 SELECT m.id, m.creator, m.title
-                FROM Manifest m
+                FROM Metadata m
                 JOIN EntityCreator ecr ON m.id = ecr.id
-                WHERE ecr.Creator == '{creatorName}'
-                UNION ALL
-                SELECT cv.id, cv.creator, cv.title
-                FROM Canvas cv
-                JOIN EntityCreator ecr ON cv.id = ecr.id
-                WHERE ecr.Creator == '{creatorName}'
+                WHERE ecr.creator == '{creatorName}'
             '''
             df_sql = pd.read_sql(query, con)
         return df_sql
@@ -128,13 +108,7 @@ class RelationalQueryProcessor(QueryProcessor):
     def getEntitiesWithTitle(self, title: str):
         with connect(self.dbPathOrUrl) as con:
             query = f'''
-                SELECT id, title, creator FROM 'Collection' 
-                WHERE title == '{title}'
-                UNION ALL
-                SELECT id, title, creator FROM 'Manifest' 
-                WHERE title == '{title}'
-                UNION ALL
-                SELECT id, title, creator FROM 'Canvas' 
+                SELECT id, title, creator FROM Metadata
                 WHERE title == '{title}'
             '''
             df_sql = pd.read_sql(query, con)

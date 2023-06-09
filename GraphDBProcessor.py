@@ -38,23 +38,19 @@ class CollectionProcessor(Processor):
 
             g = Graph()
 
-            #id has id -> id???
-            #what should the id be?? a literal??
             g.add((URIRef(data['id']), identifier, Literal(data['id'])))
             g.add((URIRef(data['id']), RDF.type, collection_uri))
             g.add((URIRef(data['id']), label, Literal(data['label']['none'][0])))
-            #g.add((URIRef(data['id']),  hasItems, Literal(data['items']))) #can a list of items be a Literal? "object must be an rdflib term..."
             for idx, manifest in enumerate(data['items']):
                 g.add((URIRef(data['id']), hasItems, Literal(manifest['id'])))
                 g.add((URIRef(manifest['id']), identifier, Literal(manifest['id'])))
                 g.add((URIRef(manifest['id']), RDF.type, manifest_uri))
                 g.add((URIRef(manifest['id']), label, Literal(manifest['label']['none'][0])))
-                #g.add((URIRef(manifest['id']), hasItems, Literal(manifest['items'])))
                 for idx, canvas in enumerate(manifest['items']):
                     g.add((URIRef(manifest['id']), hasItems, Literal(canvas['id'])))
                     g.add((URIRef(canvas['id']), identifier, Literal(canvas['id'])))
                     g.add((URIRef(canvas['id']), RDF.type, canvas_uri))
-                    g.add((URIRef(canvas['id']), label, Literal(canvas['label']['none'][0]))) #only the string of the label??
+                    g.add((URIRef(canvas['id']), label, Literal(canvas['label']['none'][0])))
 
             store = SPARQLUpdateStore()
 
