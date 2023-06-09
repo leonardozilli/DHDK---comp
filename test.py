@@ -38,7 +38,7 @@ generic = GenericQueryProcessor()
 generic.addQueryProcessor(rel_qp)
 generic.addQueryProcessor(grp_qp)
 #
-r = rel_qp.getEntityById('https://dl.ficlit.unibo.it/iiif/28429/collection')
+r = generic.getAllAnnotations()
 print(r)
 #
 #for i in r:
