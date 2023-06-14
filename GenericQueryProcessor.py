@@ -1,6 +1,8 @@
 from DM_classes import *
 from RelDBProcessor import *
 from GraphDBProcessor import *
+#list comprehension indenting
+#Annotations targets
 
 
 class GenericQueryProcessor():
@@ -29,7 +31,6 @@ class GenericQueryProcessor():
 
     def sortProcessors(self):
         proc_set = set(self.queryProcessors)
-        #list comprehension
         sorted_processors = sorted([proc for proc in proc_set], key=lambda obj:type(obj).__name__)
 
         if len(sorted_processors) > 1:
@@ -216,12 +217,49 @@ class GenericQueryProcessor():
     def getEntityById(self, entityId: str) -> IdentifiableEntity:
         self.queryProcessors = self.sortProcessors()
         try:
-            try:
-                return IdentifiableEntity(self.queryProcessors[0].getEntityById(entityId)['id'].astype(str).values[0])
-            except IndexError:
-                return IdentifiableEntity(self.queryProcessors[1].getEntityById(entityId)['id'].astype(str).values[0])
-        except KeyError:
-            raise Exception('No entity found!')
+            ann = self.queryProcessors[0].getAllAnnotations()
+            if ann['id'].str.contains(entityId).any():
+                ann = ann[ann['id'].str.contains(entityId)]
+                return Annotation(ann['id'][0], 
+                                  ann['body'][0],
+                                  self.getEntityById(ann['target'][0]),
+                                  ann['motivation'][0])
+
+            elif ann['body'].str.contains(entityId).any():
+                ann = ann[ann['body'].str.contains(entityId)]
+                return Image(ann['body'][0])
+
+            else:
+                tqp_df = self.queryProcessors[1].getEntityById(entityId)
+                try:
+                    rqp_df = pd.concat(tqp_df['id'].apply(self.queryProcessors[0].getEntityById).tolist())
+                    final_df = pd.merge(tqp_df, rqp_df, on='id', how='left')
+                except KeyError:
+                    title_creator = {'title': [None],
+                                     'creator': [None]}
+                    final_df =  pd.concat([tqp_df, pd.DataFrame(title_creator)], axis=1) 
+
+                if final_df['type'][0].endswith('Collection'):
+                    return Collection(final_df['id'][0],
+                                      final_df['label'][0],
+                                      ['item1', 'item2'],
+                                      final_df['title'][0],
+                                      final_df['creator'][0])
+
+                elif final_df['type'][0].endswith('Manifest'):
+                    return Manifest(final_df['id'][0],
+                                      final_df['label'][0],
+                                      ['item1', 'item2'],
+                                      final_df['title'][0],
+                                      final_df['creator'][0])
+
+                elif final_df['type'][0].endswith('Canvas'):
+                    return Canvas(final_df['id'][0],
+                                      final_df['label'][0],
+                                      final_df['title'][0],
+                                      final_df['creator'][0])
+        except ValueError:
+            return None
 
     def getEntitiesWithCreator(self, creatorName: str) -> List[EntityWithMetadata]:
         self.queryProcessors = self.sortProcessors()
@@ -281,3 +319,4 @@ class GenericQueryProcessor():
 
 
 #maybe handle exceptions when nothing is found??
+
