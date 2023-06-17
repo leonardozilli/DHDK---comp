@@ -1,0 +1,6 @@
+test.py
+pertest.py
+__pycache__/
+blazegraph.*
+*.db
+
