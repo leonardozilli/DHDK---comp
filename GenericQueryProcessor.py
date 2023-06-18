@@ -81,7 +81,7 @@ class GenericQueryProcessor():
         self.queryProcessors = self.sortProcessors()
         tqp_df = self.queryProcessors[1].getAllCollections()
         rqp_df = pd.concat(tqp_df['id'].apply(self.queryProcessors[0].getEntityById).tolist())
-        final_df = pd.merge(tqp_df, rqp_df, on='id', how='left').replace({float("nan"): None})
+        final_df = pd.merge(tqp_df, rqp_df, on='id', how='left').replace({float("nan") : None})
 
         result = [Collection(identifier, label, self.getManifestsInCollection(identifier), title, creator)
                   for identifier, label, title, creator 
@@ -211,7 +211,7 @@ class GenericQueryProcessor():
                 title_creator = {'title': [None],
                                  'creator': [None]}
                 final_df =  pd.concat([tqp_df, pd.DataFrame(title_creator)], axis=1) 
-                
+
             if final_df['type'][0] == 'Collection':
                 return Collection(final_df['id'][0],
                                   final_df['label'][0],
@@ -221,16 +221,16 @@ class GenericQueryProcessor():
 
             elif final_df['type'][0] == 'Manifest':
                 return Manifest(final_df['id'][0],
-                                  final_df['label'][0],
-                                  self.getCanvasesInManifest(entityId),
-                                  final_df['title'][0],
-                                  final_df['creator'][0])
+                                final_df['label'][0],
+                                self.getCanvasesInManifest(entityId),
+                                final_df['title'][0],
+                                final_df['creator'][0])
 
             elif final_df['type'][0] == 'Canvas':
                 return Canvas(final_df['id'][0],
-                                  final_df['label'][0],
-                                  final_df['title'][0],
-                                  final_df['creator'][0])
+                              final_df['label'][0],
+                              final_df['title'][0],
+                              final_df['creator'][0])
 
     def getEntitiesWithLabel(self, label: str) -> List[EntityWithMetadata] :
         result = []
