@@ -1,8 +1,6 @@
-from pandas import DataFrame
-from sqlite3 import connect
 import pandas as pd
+from sqlite3 import connect
 from sparql_dataframe import get
-import sys
 
 class Processor(object):
     def __init__(self):
@@ -54,7 +52,7 @@ class QueryProcessor(Processor):
                      FROM Image 
                      WHERE id = '{entityId}' 
                 '''
-                df = pd.read_sql(query, con).dropna(axis=1, how='all')
+                df = pd.read_sql(query, con).dropna(axis=1, how='all').replace({'' : None})
                 return df
 
         else:

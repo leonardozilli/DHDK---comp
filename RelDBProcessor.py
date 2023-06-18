@@ -1,7 +1,6 @@
-from data_model import *
-import pandas as pd
-from sqlite3 import connect
 from QueryProcessor import *
+from sqlite3 import connect
+import pandas as pd
 import json
 
 class AnnotationProcessor(Processor):
@@ -126,7 +125,8 @@ class RelationalQueryProcessor(QueryProcessor):
     def getEntitiesWithTitle(self, title: str):
         with connect(self.dbPathOrUrl) as con:
             query = f'''
-                SELECT id, title, creator FROM Metadata
+                SELECT id, title, creator 
+                FROM Metadata
                 WHERE title == '{title}'
             '''
             df_sql = pd.read_sql(query, con)

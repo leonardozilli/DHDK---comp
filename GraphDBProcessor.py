@@ -1,13 +1,8 @@
+from QueryProcessor import *
 from json import load
-from data_model import *
+from sparql_dataframe import get
 from rdflib import Graph, URIRef, RDF, RDFS, Literal
 from rdflib.plugins.stores.sparqlstore import SPARQLUpdateStore
-from sparql_dataframe import get
-from pandas import DataFrame, read_sql
-from sqlite3 import connect
-from typing import List
-from pandas import read_csv, Series
-from QueryProcessor import *
 
 class CollectionProcessor(Processor):
     def __init__(self):

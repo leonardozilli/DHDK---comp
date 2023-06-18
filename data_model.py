@@ -1,6 +1,5 @@
-#When creating an Annotation make sure that boy and target are  LISTS
-#when creating a Collection or Manifest make sure items is a LIST
 from typing import List
+
 class IdentifiableEntity(object) : 
     def __init__(self, identifier:str):
             self.identifier = identifier
@@ -45,10 +44,10 @@ class EntityWithMetadata(IdentifiableEntity):
         return self.title
     
     def getCreators(self):
-        try:
-            return self.creators.split("; ")
-        except AttributeError:
+        if self.creators == None:
             return list()
+        else:
+            return self.creators.split("; ")
 
 
 class Collection(EntityWithMetadata):
@@ -73,6 +72,7 @@ class Manifest(EntityWithMetadata):
 
     def getItems(self):
         return self.items
+
 
 class Canvas(EntityWithMetadata):
     def __init__(self, identifier: str, label: str, title: str, creators: str):

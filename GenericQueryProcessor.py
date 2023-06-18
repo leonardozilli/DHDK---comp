@@ -1,10 +1,6 @@
 from data_model import *
 from RelDBProcessor import *
 from GraphDBProcessor import *
-import numpy as np
-#list comprehension indenting
-#Annotations targets
-
 
 class GenericQueryProcessor():
     def __init__(self):
@@ -13,23 +9,19 @@ class GenericQueryProcessor():
     def cleanQueryProcessors(self) -> bool:
         try:
             self.queryProcessors = list()
-
             return True
 
         except Exception as e:
             print(e)
-
             return False
 
     def addQueryProcessor(self, processor: QueryProcessor) -> bool:
         try:
             self.queryProcessors.append(processor)
-
             return True
 
         except Exception as e:
             print(e)
-
             return False
 
     def sortProcessors(self):
@@ -46,22 +38,22 @@ class GenericQueryProcessor():
         else: 
             raise Exception("No processor found")
 
-
     def getAllAnnotations(self) -> List[Annotation]:
-        for processor in self.queryProcessors:
-            if isinstance(processor, RelationalQueryProcessor):
-                result = [Annotation(identifier, Image(body), IdentifiableEntity(target), motivation) for identifier, body, target, motivation in 
-                          zip(processor.getAllAnnotations()['id'], 
-                              processor.getAllAnnotations()['body'], 
-                              processor.getAllAnnotations()['target'], 
-                              processor.getAllAnnotations()['motivation'])]
-                return result
+        processor = self.sortProcessors()[0]
+        df = processor.getAllAnnotations()
+        df['target'] = df['target'].apply(self.getEntityById)
+        result = [Annotation(identifier, motivation, target, Image(body)) 
+                  for identifier, motivation, target, body
+                  in zip(df['id'], 
+                         df['motivation'], 
+                         df['target'], 
+                         df['body'])]
+        return result
 
     def getAllImages(self) -> List[Image]:
-        for processor in self.queryProcessors:
-            if isinstance(processor, RelationalQueryProcessor):
-                result = [Image(identifier) for identifier in processor.getAllImages()['id']]
-                return result
+        processor = self.sortProcessors()[0]
+        result = [Image(identifier) for identifier in processor.getAllImages()['id']]
+        return result
 
     def getAllCanvas(self) -> List[Canvas]:
         self.queryProcessors = self.sortProcessors()
@@ -89,13 +81,14 @@ class GenericQueryProcessor():
         self.queryProcessors = self.sortProcessors()
         tqp_df = self.queryProcessors[1].getAllCollections()
         rqp_df = pd.concat(tqp_df['id'].apply(self.queryProcessors[0].getEntityById).tolist())
-        final_df = pd.merge(tqp_df, rqp_df, on='id', how='left').replace({np.nan:''})
+        final_df = pd.merge(tqp_df, rqp_df, on='id', how='left').replace({float("nan"): None})
 
-        result = [Collection(identifier, type, title, creator, self.getManifestsInCollection(identifier)) for identifier, type, title, creator in
-                  zip(final_df['id'],
-                      final_df['type'],
-                      final_df['title'],
-                      final_df['creator'])]
+        result = [Collection(identifier, label, self.getManifestsInCollection(identifier), title, creator)
+                  for identifier, label, title, creator 
+                  in zip(final_df['id'],
+                         final_df['label'],
+                         final_df['title'],
+                         final_df['creator'])]
         return result
 
     def getAnnotationsToCanvas(self, canvasId: str) -> List[Annotation]:
@@ -122,39 +115,38 @@ class GenericQueryProcessor():
                     result.append(newitem)
         return result
 
-    #mio
     def getAnnotationsWithBody(self, bodyId: str) -> List[Annotation]:
-        for processor in self.queryProcessors:
-            if isinstance(processor, RelationalQueryProcessor):
-                result = [Annotation(identifier, body, target, motivation) for
-                          identifier, body, target, motivation in
-                          zip(processor.getAnnotationsWithBody(bodyId)['id'],
-                              processor.getAnnotationsWithBody(bodyId)['body'],
-                              processor.getAnnotationsWithBody(bodyId)['target'],
-                              processor.getAnnotationsWithBody(bodyId)['motivation'])]
-                return result
+        processor = self.sortProcessors()[0]
+        df = processor.getAnnotationsWithBody(bodyId)
+        result = [Annotation(identifier, motivation, self.getEntityById(target), Image(body)) 
+                  for identifier, motivation, target, body 
+                  in zip(df['id'],
+                         df['motivation'],
+                         df['target'],
+                         df['body'])]
+        return result
 
     def getAnnotationsWithBodyAndTarget(self, bodyId: str, targetId: str) -> List[Annotation]:
-        for processor in self.queryProcessors:
-            if isinstance(processor, RelationalQueryProcessor):
-                result = [Annotation(identifier, body, target, motivation) for
-                          identifier, body, target, motivation in
-                          zip(processor.getAnnotationsWithBodyAndTarget(bodyId, targetId)['id'],
-                              processor.getAnnotationsWithBodyAndTarget(bodyId, targetId)['body'],
-                              processor.getAnnotationsWithBodyAndTarget(bodyId, targetId)['target'],
-                              processor.getAnnotationsWithBodyAndTarget(bodyId, targetId)['motivation'])]
-                return result
+        processor = self.sortProcessors()[0]
+        df = processor.getAnnotationsWithBodyAndTarget(bodyId, targetId)
+        result = [Annotation(identifier, motivation, self.getEntityById(target), Image(body)) 
+                  for identifier, motivation, target, body 
+                  in zip(df['id'],
+                         df['motivation'],
+                         df['target'],
+                         df['body'])]
+        return result
 
     def getAnnotationsWithTarget(self, targetId: str) -> List[Annotation]:
-        for processor in self.queryProcessors:
-            if isinstance(processor, RelationalQueryProcessor):
-                result = [Annotation(identifier, body, target, motivation) for
-                          identifier, body, target, motivation in
-                          zip(processor.getAnnotationsWithTarget(targetId)['id'],
-                              processor.getAnnotationsWithTarget(targetId)['body'],
-                              processor.getAnnotationsWithTarget(targetId)['target'],
-                              processor.getAnnotationsWithTarget(targetId)['motivation'])]
-                return result
+        processor = self.sortProcessors()[0]
+        df = processor.getAnnotationsWithTarget(targetId)
+        result = [Annotation(identifier, motivation, self.getEntityById(target), Image(body)) 
+                  for identifier, motivation, target, body 
+                  in zip(df['id'],
+                         df['motivation'],
+                         df['target'],
+                         df['body'])]
+        return result
 
     def getCanvasesInCollection(self, collectionId: str) -> List[Canvas]:
         self.queryProcessors = self.sortProcessors()
@@ -165,11 +157,12 @@ class GenericQueryProcessor():
             return list()
         final_df = pd.merge(tqp_df, rqp_df, on='id', how='left')
 
-        result = [Canvas(identifier, label, title, creator) for identifier, label, title, creator in
-                  zip(final_df['id'],
-                      final_df['label'],
-                      final_df['title'],
-                      final_df['creator'])]
+        result = [Canvas(identifier, label, title, creator) 
+                  for identifier, label, title, creator 
+                  in zip(final_df['id'],
+                         final_df['label'],
+                         final_df['title'],
+                         final_df['creator'])]
         return result
 
     def getCanvasesInManifest(self, manifestId: str) -> List[Canvas]:
@@ -196,25 +189,48 @@ class GenericQueryProcessor():
 
     def getEntityById(self, entityId: str) -> IdentifiableEntity:
         self.queryProcessors = self.sortProcessors()
-        tqp_df = self.queryProcessors[1].getEntityById(entityId)
         rqp_df = self.queryProcessors[0].getEntityById(entityId)
+        tqp_df = self.queryProcessors[1].getEntityById(entityId)
+
         if tqp_df.empty and rqp_df.empty:
             return None
+
         elif tqp_df.empty:
             if 'body' in rqp_df:
-                newitem = Annotation(entityId, rqp_df['motivation'][0], self.getEntityById(rqp_df['target'][0]), Image(rqp_df['body'][0]))
+                return Annotation(rqp_df['id'][0], 
+                                  rqp_df['body'][0],
+                                  self.getEntityById(rqp_df['target'][0]),
+                                  rqp_df['motivation'][0])
             else:
-                newitem = Image(entityId)
-            return newitem
+                return Image(rqp_df['id'][0])
+
         else:
-            type = tqp_df['type'][0]
-            if type == 'Collection':
-                newitem = Collection(entityId, tqp_df['label'][0], self.getManifestsInCollection(entityId), '', '')
-            elif type == 'Manifest':
-                newitem = Manifest(entityId, tqp_df['label'][0], self.getCanvasesInManifest(entityId), '', '')
-            else:
-                newitem = Canvas(entityId, tqp_df['label'][0], '', '')
-            return newitem
+            try:
+                final_df = pd.merge(tqp_df, rqp_df, on='id', how='left')
+            except KeyError:
+                title_creator = {'title': [None],
+                                 'creator': [None]}
+                final_df =  pd.concat([tqp_df, pd.DataFrame(title_creator)], axis=1) 
+                
+            if final_df['type'][0] == 'Collection':
+                return Collection(final_df['id'][0],
+                                  final_df['label'][0],
+                                  self.getManifestsInCollection(entityId),
+                                  final_df['title'][0],
+                                  final_df['creator'][0])
+
+            elif final_df['type'][0] == 'Manifest':
+                return Manifest(final_df['id'][0],
+                                  final_df['label'][0],
+                                  self.getCanvasesInManifest(entityId),
+                                  final_df['title'][0],
+                                  final_df['creator'][0])
+
+            elif final_df['type'][0] == 'Canvas':
+                return Canvas(final_df['id'][0],
+                                  final_df['label'][0],
+                                  final_df['title'][0],
+                                  final_df['creator'][0])
 
     def getEntitiesWithLabel(self, label: str) -> List[EntityWithMetadata] :
         result = []
@@ -247,9 +263,8 @@ class GenericQueryProcessor():
         return result
 
     def getImagesAnnotatingCanvas(self, canvasId: str) -> List[Image]:
-        for processor in self.queryProcessors:
-            if isinstance(processor, RelationalQueryProcessor):
-                result = [Image(identifier) for
-                          identifier in
-                          processor.getAnnotationsWithTarget(canvasId)['body']]
-                return result
+        processor = self.sortProcessors()[0]
+        result = [Image(identifier) 
+                  for identifier 
+                  in processor.getAnnotationsWithTarget(canvasId)['body']]
+        return result
