@@ -41,14 +41,16 @@ class EntityWithMetadata(IdentifiableEntity):
         return self.label
 
     def getTitle(self):
-        return self.title
+        if len(self.title) > 0:
+            return self.title
+        else:
+            return None
     
     def getCreators(self):
-        if self.creators == None:
-            return list()
-        else:
+        if len(self.creators) > 0:
             return self.creators.split("; ")
-
+        else:
+            return list()
 
 class Collection(EntityWithMetadata):
     def __init__(self, identifier: str, label: str, items: List, title: str , creators: str):

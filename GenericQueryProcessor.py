@@ -73,7 +73,7 @@ class GenericQueryProcessor():
         for idx, row in tqp_df.iterrows():
             id = row['id']
             df = self.queryProcessors[0].getEntityById(id)
-            newitem = Manifest(id, row['type'], self.getCanvasesInManifest(id), df['title'][0], df['creator'][0])
+            newitem = Manifest(id, row['label'], self.getCanvasesInManifest(id), df['title'][0], df['creator'][0])
             result.append(newitem)
         return result
 
@@ -198,9 +198,9 @@ class GenericQueryProcessor():
         elif tqp_df.empty:
             if 'body' in rqp_df:
                 return Annotation(rqp_df['id'][0], 
-                                  rqp_df['body'][0],
+                                  rqp_df['motivation'][0],
                                   self.getEntityById(rqp_df['target'][0]),
-                                  rqp_df['motivation'][0])
+                                  rqp_df['body'][0])
             else:
                 return Image(rqp_df['id'][0])
 

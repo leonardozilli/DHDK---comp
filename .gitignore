@@ -3,4 +3,5 @@ pertest.py
 __pycache__/
 blazegraph.*
 *.db
+*.log
 

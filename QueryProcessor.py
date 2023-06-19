@@ -52,7 +52,7 @@ class QueryProcessor(Processor):
                      FROM Image 
                      WHERE id = '{entityId}' 
                 '''
-                df = pd.read_sql(query, con).dropna(axis=1, how='all').replace({'' : None})
+                df = pd.read_sql(query, con).dropna(axis=1, how='all')
                 return df
 
         else:
