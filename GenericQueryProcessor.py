@@ -62,8 +62,12 @@ class GenericQueryProcessor():
         for idx, row in tqp_df.iterrows():
             id = row['id']
             df = self.queryProcessors[0].getEntityById(id)
-            newitem = Canvas(id, row['label'], df['title'][0], df['creator'][0])
-            result.append(newitem)
+            if not df.empty:
+                newitem = Canvas(id, row['label'], df['title'][0], df['creator'][0])
+                result.append(newitem)
+            else:
+                newitem = Canvas(id, row['label'], '', '')
+                result.append(newitem)
         return result
 
     def getAllManifests(self) -> List[Manifest]:
@@ -73,15 +77,19 @@ class GenericQueryProcessor():
         for idx, row in tqp_df.iterrows():
             id = row['id']
             df = self.queryProcessors[0].getEntityById(id)
-            newitem = Manifest(id, row['label'], self.getCanvasesInManifest(id), df['title'][0], df['creator'][0])
-            result.append(newitem)
+            if not df.empty:
+                newitem = Manifest(id, row['type'], self.getCanvasesInManifest(id), df['title'][0], df['creator'][0])
+                result.append(newitem)
+            else:
+                newitem = Manifest(id, row['type'], self.getCanvasesInManifest(id), '', '')
+                result.append(newitem)
         return result
 
     def getAllCollections(self) -> List[Collection]:
         self.queryProcessors = self.sortProcessors()
         tqp_df = self.queryProcessors[1].getAllCollections()
         rqp_df = pd.concat(tqp_df['id'].apply(self.queryProcessors[0].getEntityById).tolist())
-        final_df = pd.merge(tqp_df, rqp_df, on='id', how='left').replace({float("nan") : None})
+        final_df = pd.merge(tqp_df, rqp_df, on='id', how='left').replace({float("nan") : ''})
 
         result = [Collection(identifier, label, self.getManifestsInCollection(identifier), title, creator)
                   for identifier, label, title, creator 
@@ -155,7 +163,7 @@ class GenericQueryProcessor():
             rqp_df = pd.concat(tqp_df['id'].apply(self.queryProcessors[0].getEntityById).tolist())
         except ValueError:
             return list()
-        final_df = pd.merge(tqp_df, rqp_df, on='id', how='left')
+        final_df = pd.merge(tqp_df, rqp_df, on='id', how='left').replace({float("nan") : ''})
 
         result = [Canvas(identifier, label, title, creator) 
                   for identifier, label, title, creator 
@@ -172,8 +180,12 @@ class GenericQueryProcessor():
         for idx, row in tqp_df.iterrows():
             id = row['id']
             df =self.queryProcessors[0].getEntityById(id)
-            newitem = Canvas(id, row['label'], df['title'][0], df['creator'][0])
-            result.append(newitem)
+            if not df.empty:
+                newitem = Canvas(id, row['label'], df['title'][0], df['creator'][0])
+                result.append(newitem)
+            else:
+                newitem = Canvas(id, row['label'], '', '')
+                result.append(newitem)
         return result
 
     def getManifestsInCollection(self, collectionId:str) -> List[Manifest]:
@@ -183,8 +195,12 @@ class GenericQueryProcessor():
         for idx, row in tqp_df.iterrows():
             id = row['id']
             df = self.queryProcessors[0].getEntityById(id)
-            newitem = Manifest(id, row['label'], self.getCanvasesInManifest(id), df['title'][0], df['creator'][0])
-            result.append(newitem)
+            if not df.empty:
+                newitem = Manifest(id, row['label'], self.getCanvasesInManifest(id), df['title'][0], df['creator'][0])
+                result.append(newitem)
+            else:
+                newitem = Manifest(id, row['label'], self.getCanvasesInManifest(id), '', '')
+                result.append(newitem)
         return result
 
     def getEntityById(self, entityId: str) -> IdentifiableEntity:
@@ -208,8 +224,8 @@ class GenericQueryProcessor():
             try:
                 final_df = pd.merge(tqp_df, rqp_df, on='id', how='left')
             except KeyError:
-                title_creator = {'title': [None],
-                                 'creator': [None]}
+                title_creator = {'title': [''],
+                                 'creator': ['']}
                 final_df =  pd.concat([tqp_df, pd.DataFrame(title_creator)], axis=1) 
 
             if final_df['type'][0] == 'Collection':
