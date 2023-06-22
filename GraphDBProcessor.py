@@ -49,9 +49,10 @@ class CollectionProcessor(Processor):
         new_graph.add((collection_subject, has_id, Literal(json_file['id'])))
         new_graph.add((collection_subject, RDF.type, collection_type))
 
-        collection_label_key:dict = json_file['label']
-        collection_label_value = list(collection_label_key.keys())[0] 
-        new_graph.add((collection_subject, RDFS.label, Literal(json_file['label'][collection_label_value][0]))) 
+        if json_file['label'] is not None:
+            collection_label_key:dict = json_file['label']
+            collection_label_value = list(collection_label_key.keys())[0] 
+            new_graph.add((collection_subject, RDFS.label, Literal(json_file['label'][collection_label_value][0]))) 
 
         for manifest in json_file['items']: 
             manifest_subject = URIRef(manifest['id'])
@@ -60,9 +61,10 @@ class CollectionProcessor(Processor):
             new_graph.add((manifest_subject, has_id, Literal(manifest['id'])))
             new_graph.add((manifest_subject, RDF.type, manifest_type))
             
-            manifest_label_key:dict = manifest['label']
-            manifest_label_value = list(manifest_label_key.keys())[0]
-            new_graph.add((manifest_subject, RDFS.label, Literal(manifest['label'][manifest_label_value][0])))
+            if manifest['label'] is not None:    
+                manifest_label_key:dict = manifest['label']
+                manifest_label_value = list(manifest_label_key.keys())[0]
+                new_graph.add((manifest_subject, RDFS.label, Literal(manifest['label'][manifest_label_value][0])))
 
             for canvas in manifest['items']: 
                 canvas_subject = URIRef(canvas['id'])
@@ -70,9 +72,10 @@ class CollectionProcessor(Processor):
                 new_graph.add((canvas_subject, has_id, Literal(canvas['id'])))
                 new_graph.add((canvas_subject, RDF.type, canvas_type))
 
-                canvas_label_key:dict = canvas['label']
-                canvas_label_value = list(canvas_label_key.keys())[0]
-                new_graph.add((canvas_subject, RDFS.label, Literal(canvas['label'][canvas_label_value][0])))
+                if canvas['label'] is not None:
+                    canvas_label_key:dict = canvas['label']
+                    canvas_label_value = list(canvas_label_key.keys())[0]
+                    new_graph.add((canvas_subject, RDFS.label, Literal(canvas['label'][canvas_label_value][0])))
 
 
 class TriplestoreQueryProcessor(QueryProcessor):

@@ -36,19 +36,18 @@ class QueryProcessor(Processor):
         super().__init__()
         
     def getEntityById(self, entityId:str) -> pd.DataFrame:
-        df = pd.DataFrame()
-        if self.dbPathOrUrl.endswith('.db'):
+        if type(self).__name__ == "RelationalQueryProcessor":
             with connect(self.dbPathOrUrl) as con:
                 query = f'''
-                     SELECT id, creator, title, NULL AS body, NULL AS target, NULL AS motivation 
+                     SELECT DISTINCT id, creator, title, NULL AS body, NULL AS target, NULL AS motivation 
                      FROM Metadata 
                      WHERE id = '{entityId}' 
                      UNION 
-                     SELECT id, NULL, NULL, body, target, motivation 
+                     SELECT DISTINCT id, NULL, NULL, body, target, motivation 
                      FROM Annotation 
                      WHERE id = '{entityId}' 
                      UNION 
-                     SELECT id, NULL, NULL, NULL, NULL, NULL 
+                     SELECT DISTINCT id, NULL, NULL, NULL, NULL, NULL 
                      FROM Image 
                      WHERE id = '{entityId}' 
                 '''

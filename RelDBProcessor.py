@@ -67,7 +67,7 @@ class RelationalQueryProcessor(QueryProcessor):
     def getAllAnnotations(self):
         with connect(self.dbPathOrUrl) as con:
             query = f'''
-                SELECT id, body, target, motivation 
+                SELECT DISTINCT id, body, target, motivation 
                 FROM Annotation
             '''
             df_sql = pd.read_sql(query, con)
@@ -76,7 +76,7 @@ class RelationalQueryProcessor(QueryProcessor):
     def getAllImages(self):
         with connect(self.dbPathOrUrl) as con:
             query = f'''
-                SELECT id FROM Image
+                SELECT DISTINCT id FROM Image
             '''
             df_sql = pd.read_sql(query, con)
         return df_sql
@@ -84,7 +84,7 @@ class RelationalQueryProcessor(QueryProcessor):
     def getAnnotationsWithBody(self, bodyId: str):
         with connect(self.dbPathOrUrl) as con:
             query = f'''
-                SELECT id, body, target, motivation 
+                SELECT DISTINCT id, body, target, motivation 
                 FROM Annotation 
                 WHERE body == '{bodyId}'
             '''
@@ -94,7 +94,7 @@ class RelationalQueryProcessor(QueryProcessor):
     def getAnnotationsWithBodyAndTarget(self, bodyId: str, targetId: str):
         with connect(self.dbPathOrUrl) as con:
             query = f'''
-                SELECT id, body, target, motivation 
+                SELECT DISTINCT id, body, target, motivation 
                 FROM Annotation 
                 WHERE body == '{bodyId}' AND target == '{targetId}'
             '''
@@ -104,7 +104,7 @@ class RelationalQueryProcessor(QueryProcessor):
     def getAnnotationsWithTarget(self, targetId: str):
         with connect(self.dbPathOrUrl) as con:
             query = f'''
-                SELECT id, body, target, motivation 
+                SELECT DISTINCT id, body, target, motivation 
                 FROM Annotation 
                 WHERE target == '{targetId}'
             '''
@@ -114,7 +114,7 @@ class RelationalQueryProcessor(QueryProcessor):
     def getEntitiesWithCreator(self, creatorName: str):
         with connect(self.dbPathOrUrl) as con:
             query = f'''
-                SELECT m.id, m.creator, m.title
+                SELECT DISTINCT m.id, m.creator, m.title
                 FROM Metadata m
                 JOIN EntityCreator ecr ON m.id = ecr.id
                 WHERE ecr.creator == '{creatorName}'
@@ -125,7 +125,7 @@ class RelationalQueryProcessor(QueryProcessor):
     def getEntitiesWithTitle(self, title: str):
         with connect(self.dbPathOrUrl) as con:
             query = f'''
-                SELECT id, title, creator 
+                SELECT DISTINCT id, title, creator 
                 FROM Metadata
                 WHERE title == '{title}'
             '''

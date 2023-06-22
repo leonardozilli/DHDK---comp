@@ -23,6 +23,8 @@ class GenericQueryProcessor():
         except Exception as e:
             print(e)
             return False
+    def ret(self):
+        return self.queryProcessors
 
     def sortProcessors(self):
         proc_set = set(self.queryProcessors)
@@ -78,17 +80,20 @@ class GenericQueryProcessor():
             id = row['id']
             df = self.queryProcessors[0].getEntityById(id)
             if not df.empty:
-                newitem = Manifest(id, row['type'], self.getCanvasesInManifest(id), df['title'][0], df['creator'][0])
+                newitem = Manifest(id, row['label'], self.getCanvasesInManifest(id), df['title'][0], df['creator'][0])
                 result.append(newitem)
             else:
-                newitem = Manifest(id, row['type'], self.getCanvasesInManifest(id), '', '')
+                newitem = Manifest(id, row['label'], self.getCanvasesInManifest(id), '', '')
                 result.append(newitem)
         return result
 
     def getAllCollections(self) -> List[Collection]:
         self.queryProcessors = self.sortProcessors()
         tqp_df = self.queryProcessors[1].getAllCollections()
-        rqp_df = pd.concat(tqp_df['id'].apply(self.queryProcessors[0].getEntityById).tolist())
+        try:
+            rqp_df = pd.concat(tqp_df['id'].apply(self.queryProcessors[0].getEntityById).tolist())
+        except ValueError:
+            return list()
         final_df = pd.merge(tqp_df, rqp_df, on='id', how='left').replace({float("nan") : ''})
 
         result = [Collection(identifier, label, self.getManifestsInCollection(identifier), title, creator)
@@ -216,7 +221,7 @@ class GenericQueryProcessor():
                 return Annotation(rqp_df['id'][0], 
                                   rqp_df['motivation'][0],
                                   self.getEntityById(rqp_df['target'][0]),
-                                  rqp_df['body'][0])
+                                  Image(rqp_df['body'][0]))
             else:
                 return Image(rqp_df['id'][0])
 
@@ -268,7 +273,7 @@ class GenericQueryProcessor():
             result.append(newitem)
         return result
     
-    def getEntitiesWithCreator(self, creatorName: str) ->List[EntityWithMetadata]:
+    def getEntitiesWithCreator(self, creatorName: str) -> List[EntityWithMetadata]:
         result = []
         self.queryProcessors = self.sortProcessors()
         tqp_df = self.queryProcessors[0].getEntitiesWithCreator(creatorName) 
