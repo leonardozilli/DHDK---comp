@@ -23,8 +23,6 @@ class GenericQueryProcessor():
         except Exception as e:
             print(e)
             return False
-    def ret(self):
-        return self.queryProcessors
 
     def sortProcessors(self):
         proc_set = set(self.queryProcessors)
